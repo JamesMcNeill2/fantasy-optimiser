@@ -217,5 +217,38 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# Exploration files
 exploration/
+
+# Terraform
+**/.terraform/*
+
+# State files and backups
+*.tfstate
+*.tfstate.*
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Variable files, which often contain secrets
+*.tfvars
+*.tfvars.json
+
+# Local overrides
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Saved plan files
+*.tfplan
+tfplan
+
+# CLI config files
+.terraformrc
+terraform.rc
+
+# Backend config files
 backend.hcl
+*.backend.hcl
