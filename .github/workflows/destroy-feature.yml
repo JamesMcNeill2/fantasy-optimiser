@@ -91,7 +91,7 @@ jobs:
         run: terraform destroy -auto-approve -lock-timeout=5m
 
       - name: Verify State Is Empty
-        if: steps.ws.outputs.exits == 'true'
+        if: steps.ws.outputs.exists == 'true'
         run: |
           REMAINING=$(terraform state list)
           if [ -n "$REMAINING" ]; then
