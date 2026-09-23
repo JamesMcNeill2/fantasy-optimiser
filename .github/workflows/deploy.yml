@@ -91,5 +91,5 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -lock-timeout=5m -out=tfplan
 
-      - name:: Terraform Apply
+      - name: Terraform Apply
         run: terraform apply -lock-timeout=5m tfplan

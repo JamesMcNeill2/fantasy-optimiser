@@ -84,7 +84,7 @@ jobs:
 
       - name: Select Workspace
         if: steps.ws.outputs.exists == 'true'
-        run: terraform workspace select '$WORKSPACE'
+        run: terraform workspace select "$WORKSPACE"
 
       - name: Destroy
         if: steps.ws.outputs.exists == 'true'
