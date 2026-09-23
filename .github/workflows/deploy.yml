@@ -76,20 +76,20 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/TerraformDeployRole
           aws-region: eu-west-2
-      
+
       - name: Terraform Init
         env:
           TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
         run: terraform init -backend-config="bucket=$TF_STATE_BUCKET"
-      
+
       - name: Select Workspace
         run: terraform workspace select -or-create "$WORKSPACE"
-      
+
       - name: Terraform Validate
         run: terraform validate
-      
+
       - name: Terraform Plan
         run: terraform plan -lock-timeout=5m -out=tfplan
-      
+
       - name:: Terraform Apply
         run: terraform apply -lock-timeout=5m tfplan
