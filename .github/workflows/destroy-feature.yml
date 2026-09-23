@@ -1,0 +1,110 @@
+name: Terraform Destroy Feature Branch
+
+on:
+  delete:
+
+permissions:
+  id-token: write
+  contents: read
+
+# Same group as deploy.yml uses for this branch
+# A destroy waits for any in-flight deploy of the branch
+# instead of failing on the state lock
+concurrency:
+  group: deploy-refs/heads/${{ github.event.ref }}
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+jobs:
+  destroy:
+    if: github.event.ref_type == 'branch' && startsWith(github.event.ref, 'feature/')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/live
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+
+      # Must produce exactly the same name as deploy.yml does
+      - name: Set Workspace Name
+        env:
+          BRANCH: ${{ github.event.ref }}
+        run: |
+          WORKSPACE=$(printf '%s' "$BRANCH" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//' \
+            | cut -c1-30 \
+            | sed -E 's/-+$//')
+          case "$WORKSPACE" in
+            feature-*) ;;
+            *)
+              echo "::error::Refusing to destroy workspace '$WORKSPACE'"
+              exit 1
+              ;;
+          esac
+          echo "WORKSPACE=$WORKSPACE" >> "$GITHUB_ENV"
+          echo "Workspace: $WORKSPACE"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e #v4.0.1
+        with:
+          terraform_version: 1.16.2
+          terraform_wrapper: false
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/TerraformDeployRole
+          aws-region: eu-west-2
+
+      - name: Terraform Init
+        env:
+          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+        run: terraform init -backend-config="bucket=$TF_STATE_BUCKET"
+      
+      # Don't use -or-create here
+      # A missing workspace means the branch was never deployed
+      # so there is nothing to destroy
+      - name: Check Workspace Exists
+        id: ws
+        run: |
+          if terraform workspace list | sed 's/^[* ]*//' | grep -qx "$WORKSPACE"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No workspace '$WORKSPACE' found, nothing to destroy"
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Select Workspace
+        if: steps.ws.outputs.exists == 'true'
+        run: terraform workspace select "$WORKSPACE"
+
+      - name: Destroy
+        if: steps.ws.outputs.exists == 'true'
+        run: terraform destroy -auto-approve -lock-timeout=5m
+
+      - name: Verify State Is Empty
+        if: steps.ws.outputs.exits == 'true'
+        run: |
+          REMAINING=$(terraform state list)
+          if [ -n "$REMAINING" ]; then
+            echo "::error::Resources still in state after destroy:"
+            echo "$REMAINING"
+            exit 1
+          fi
+          echo "$WORKSPACE destroyed"
+
+      # Removes the now-empty state file from S3
+      # Refuses if state isn't empty
+      - name: Delete Workspace
+        if: steps.ws.outputs.exists == 'true'
+        run: |
+          terraform workspace select default
+          terraform workspace delete "$WORKSPACE"
