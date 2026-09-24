@@ -8,6 +8,7 @@ module "data_store" {
 }
 
 module "ecr" {
-  source      = "../modules/ecr"
-  name_prefix = local.name_prefix
+  source       = "../modules/ecr"
+  name_prefix  = local.name_prefix
+  force_delete = startswith(terraform.workspace, "feature-")
 }
