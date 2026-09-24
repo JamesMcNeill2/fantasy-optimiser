@@ -50,17 +50,18 @@ jobs:
           fi
           echo "WORKSPACE=$WORKSPACE" >> "$GITHUB_ENV"
           echo "Workspace: $WORKSPACE"
-
-      - name: Setup Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
-          python-version: '3.13'
+          version: "0.12.13"
+          enable-cache: true
 
       - name: Ruff
         working-directory: .
         run: |
-          pip install ruff==0.16.5
-          ruff check .
+          uv run --locked --only-dev ruff check
+          uv run --locked --only-dev ruff format --check
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e #v4.0.1
