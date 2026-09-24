@@ -1,4 +1,4 @@
-FROM public.ecr.aws/lambda/python:3.13
+FROM public.ecr.aws/lambda/python:3.14
 
 COPY --from=ghcr.io/astral-sh/uv:0.12.13 /uv /bin/uv
 
@@ -9,11 +9,11 @@ ENV UV_COMPILE_BYTECODE=1
 # uv needs every workspace member's pyproject.toml to read the lockfile
 COPY pyproject.toml uv.lock /build/
 COPY services/api/pyproject.toml /build/services/api/
-COPY services/batch/pyproject.toml /build/service/batch/
+COPY services/batch/pyproject.toml /build/services/batch/
 
-RUN cd /build && \ 
+RUN cd /build && \
     uv export --package batch --locked --no-dev --no-emit-workspace -o requirements.txt && \
-    uv pip install --no-cache -r requirements.txt ---target "${LAMBDA_TASK_ROOT}" && \
+    uv pip install --no-cache -r requirements.txt --target "${LAMBDA_TASK_ROOT}" && \
     rm -rf /build
 
 # Code last

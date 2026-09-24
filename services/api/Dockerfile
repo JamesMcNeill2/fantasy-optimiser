@@ -1,4 +1,4 @@
-FROM public.ecr.aws/lambda/python:3.13
+FROM public.ecr.aws/lambda/python:3.14
 
 COPY --from=ghcr.io/astral-sh/uv:0.12.13 /uv /bin/uv
 
@@ -11,14 +11,14 @@ COPY pyproject.toml uv.lock /build/
 COPY services/api/pyproject.toml /build/services/api/
 COPY services/batch/pyproject.toml /build/services/batch/
 
-RUN dc /build && \
+RUN cd /build && \
     uv export --package api --locked --no-dev --no-emit-workspace -o requirements.txt && \
     uv pip install --no-cache -r requirements.txt --target "${LAMBDA_TASK_ROOT}" && \
     rm -rf /build
 
 # Code last
 # Least frequently changed first
-COPY shared/ ${LAMBDA_TASK_ROOT}/shared
+COPY shared/ ${LAMBDA_TASK_ROOT}/shared/
 COPY services/api/app/ ${LAMBDA_TASK_ROOT}/app/
 
 CMD ["app.main.handler"]
