@@ -51,26 +51,27 @@ jobs:
           echo "WORKSPACE=$WORKSPACE" >> "$GITHUB_ENV"
           echo "Workspace: $WORKSPACE"
 
-      - name: Setup Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
-          python-version: '3.13'
+          version: "0.12.13"
+          enable-cache: true
 
       - name: Ruff
         working-directory: .
         run: |
-          pip install ruff==0.16.5
-          ruff check .
+          uv run --locked --only-dev ruff check
+          uv run --locked --only-dev ruff format --check
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e #v4.0.1
         with:
           terraform_version: 1.16.2
           terraform_wrapper: false
-      
+
       - name: Terraform Format Check
         run: terraform fmt -check -recursive ..
-      
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
@@ -87,6 +88,48 @@ jobs:
 
       - name: Terraform Validate
         run: terraform validate
+
+      - name: Terraform Apply ECR
+        run: terraform apply -lock-timeout=5m -auto-approve -target=module.ecr
+
+      - name: Read ECR Repository URLs
+        id: ecr
+        run: |
+          repos=$(terraform output -json ecr_repository_urls)
+          api=$(jq -r '.api' <<< "$repos")
+          batch=$(jq -r '.batch' <<< "$repos")
+          echo "api=$api" >> "$GITHUB_OUTPUT"
+          echo "batch=$batch" >> "$GITHUB_OUTPUT"
+          echo "registry=${api%%/*}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to ECR
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          aws ecr get-login-password --region eu-west-2 |
+            docker login --username AWS --password-stdin "$REGISTRY"
+
+      - name: Build and Push Images
+        working-directory: .
+        env:
+          API_REPO: ${{ steps.ecr.outputs.api }}
+          BATCH_REPO: ${{ steps.ecr.outputs.batch }}
+          TAG: ${{ github.sha }}
+        run: |
+          build_and_push() {
+            local svc=$1 repo=$2
+            if aws ecr describe-images --region eu-west-2 \
+                --repository-name "${repo#*/}" \
+                --image-ids imageTag="$TAG" > /dev/null 2>&1; then
+              echo "::notice::$svc:$TAG already in ECR, skipping"
+              return
+            fi
+            docker build --platform linux/amd64 --provenance=false \
+              -f "services/$svc/Dockerfile" -t "$repo:$TAG" .
+            docker push "$repo:$TAG"
+          }
+          build_and_push api "$API_REPO"
+          build_and_push batch "$BATCH_REPO"
 
       - name: Terraform Plan
         run: terraform plan -lock-timeout=5m -out=tfplan

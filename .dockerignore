@@ -1,0 +1,29 @@
+# Version control and CI
+.git
+.github
+
+# Not part of either image
+infra
+frontend
+**/test-events
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Local Python environment and caches
+.venv
+**/__pycache__
+**/*.py[cod]
+.ruff_cache
+.pytest_cache
+.mypy_cache
+.coverage
+htmlcov
+
+# Editor and OS files
+.vscode
+.idea
+Thumbs.db
