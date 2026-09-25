@@ -125,7 +125,7 @@ jobs:
               return
             fi
             docker build --platform linux/amd64 --provenance=false \
-              -f "services/$svc/Dockerfile" -t "$repo:$TAG"
+              -f "services/$svc/Dockerfile" -t "$repo:$TAG" .
             docker push "$repo:TAG"
           }
           build_and_push api "$API_REPO"
