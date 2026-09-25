@@ -68,10 +68,10 @@ jobs:
         with:
           terraform_version: 1.16.2
           terraform_wrapper: false
-      
+
       - name: Terraform Format Check
         run: terraform fmt -check -recursive ..
-      
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
@@ -88,6 +88,48 @@ jobs:
 
       - name: Terraform Validate
         run: terraform validate
+
+      - name: Terraform Apply ECR
+        run: terraform apply -lock-timeout=5m -auto-approve -target=module.ecr
+
+      - name: Read ECR Repository URLs
+        id: ecr
+        run: |
+          repos=$(terraform output -json ecr_repository_urls)
+          api=$(jq -r '.api' <<< "$repos")
+          batch=$(jq -r '.batch' <<< "$repos")
+          echo "api=$api" >> "$GITHUB_OUTPUT"
+          echo "batch=$batch" >> "$GITHUB_OUTPUT"
+          echo "registry=${api%%/*}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to ECR
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          aws ecr get-login-password --region eu-west-2 |
+            docker login --username AWS --password-stdin "$REGISTRY"
+
+      - name: Build and Push Images
+        working-directory: .
+        env:
+          API_REPO: ${{ steps.ecr.outputs.api }}
+          BATCH_REPO: ${{ steps.ecr.outputs.batch }}
+          TAG: ${{ github.sha }}
+        run: |
+          build_and_push() {
+            local svc=$1 repo=$2
+            if aws ecr describe-images --region eu-west-2 \
+                --repository-name "${repo#*/}" \
+                --image-ids imageTag="$TAG" > /dev/null 2>&1; then
+              echo "::notice::$svc:$TAG already in ECR, skipping"
+              return
+            fi
+            docker build --platform linux/amd64 --provenance=false \
+              -f "services/$svc/Dockerfile" -t "$repo:$TAG" .
+            docker push "$repo:$TAG"
+          }
+          build_and_push api "$API_REPO"
+          build_and_push batch "$BATCH_REPO"
 
       - name: Terraform Plan
         run: terraform plan -lock-timeout=5m -out=tfplan
