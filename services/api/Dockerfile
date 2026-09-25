@@ -1,6 +1,8 @@
-FROM public.ecr.aws/lambda/python:3.14
+FROM ghcr.io/astral-sh/uv:0.12.13 AS uv
 
-COPY --from=ghcr.io/astral-sh/uv:0.12.13 /uv /bin/uv
+FROM public.ecr.aws/lambda/python:3.14@sha256:0f6bf1e7a20f4a537f309d4bc53b8b190567dece870e6cfd4c1fd44f662705a3
+
+COPY --from=uv /uv /bin/uv
 
 # Precompile dependencies to .pyc for faster cold starts
 ENV UV_COMPILE_BYTECODE=1
