@@ -56,6 +56,6 @@ data "aws_iam_policy_document" "lambda_pull" {
 
 resource "aws_ecr_repository_policy" "lambda_pull" {
   for_each   = aws_ecr_repository.this
-  repository = each.value_name
+  repository = each.value.name
   policy     = data.aws_iam_policy_document.lambda_pull.json
 }
