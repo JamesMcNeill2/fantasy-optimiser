@@ -40,7 +40,7 @@ variable "timeout" {
   default     = 15
 
   validation {
-    condition     = var.timeout >= 1 && var.table <= 30
+    condition     = var.timeout >= 1 && var.timeout <= 30
     error_message = "timeout must be between 1 and 30 seconds (HTTP API integration limit)."
   }
 }

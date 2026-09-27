@@ -7,7 +7,7 @@ resource "aws_cloudwatch_log_group" "api" {
   retention_in_days = var.log_retention_days
 }
 
-data "data_iam_policy_document" "assume_role" {
+data "aws_iam_policy_document" "assume_role" {
   statement {
     effect  = "Allow"
     actions = ["sts:AssumeRole"]
