@@ -49,7 +49,6 @@ resource "aws_iam_role_policy" "exec" {
   policy = data.aws_iam_policy_document.exec.json
 }
 
-
 resource "aws_lambda_function" "api" {
   function_name = local.function_name
   role          = aws_iam_role.exec.arn
