@@ -1,5 +1,5 @@
 variable "name_prefix" {
-  description = "Prefix for all resource name, e.g. fantasy-optimiser-dev"
+  description = "Prefix for all resource names, e.g. fantasy-optimiser-dev"
   type        = string
 }
 
@@ -24,7 +24,7 @@ variable "users_table_name" {
 }
 
 variable "users_table_arn" {
-  description = "ARN of the USERS DynamoDB table, used in the execution role's read policy"
+  description = "ARN of the users DynamoDB table, used in the execution role's read policy"
   type        = string
 }
 
