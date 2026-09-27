@@ -28,7 +28,7 @@ data "aws_iam_policy_document" "exec" {
   statement {
     sid     = "ReadTables"
     effect  = "Allow"
-    actions = ["dynamodb:GetItem", "dynamodb:BatchGetItem", "dynamoDB:Query"]
+    actions = ["dynamodb:GetItem", "dynamodb:BatchGetItem", "dynamodb:Query"]
     resources = [
       var.player_table_arn,
       var.users_table_arn,
