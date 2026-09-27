@@ -30,7 +30,7 @@ data "aws_iam_policy_document" "exec" {
     effect  = "Allow"
     actions = ["dynamodb:GetItem", "dynamodb:BatchGetItem", "dynamodb:Query"]
     resources = [
-      var.player_table_arn,
+      var.players_table_arn,
       var.users_table_arn,
     ]
   }
@@ -61,7 +61,7 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      PLAYERS_TABLE = var.player_table_name
+      PLAYERS_TABLE = var.players_table_name
       USERS_TABLE   = var.users_table_name
     }
   }

@@ -19,8 +19,8 @@ module "api" {
   name_prefix = local.name_prefix
   image_uri   = "${module.ecr.repository_urls["api"]}:${var.image_tag}"
 
-  player_table_name = module.data_store.players_table_name
-  player_table_arn  = module.data_store.players_table_arn
-  users_table_name  = module.data_store.users_table_name
-  users_table_arn   = module.data_store.users_table_arn
+  players_table_name = module.data_store.players_table_name
+  players_table_arn  = module.data_store.players_table_arn
+  users_table_name   = module.data_store.users_table_name
+  users_table_arn    = module.data_store.users_table_arn
 }

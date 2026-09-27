@@ -8,12 +8,12 @@ variable "image_uri" {
   type        = string
 }
 
-variable "player_table_name" {
+variable "players_table_name" {
   description = "Name of the players DynamoDB table, passed to the function as PLAYERS_TABLE"
   type        = string
 }
 
-variable "player_table_arn" {
+variable "players_table_arn" {
   description = "ARN of the players DynamoDB table, used in the execution role's read policy"
   type        = string
 }
