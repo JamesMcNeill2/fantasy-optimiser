@@ -22,6 +22,8 @@ jobs:
   destroy:
     if: github.event.ref_type == 'branch' && startsWith(github.event.ref, 'feature/')
     runs-on: ubuntu-latest
+    env:
+      TF_VAR_image_tag: unused-on-destroy
     defaults:
       run:
         working-directory: infra/live
@@ -57,7 +59,7 @@ jobs:
         with:
           terraform_version: 1.16.2
           terraform_wrapper: false
-      
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
@@ -68,7 +70,7 @@ jobs:
         env:
           TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
         run: terraform init -backend-config="bucket=$TF_STATE_BUCKET"
-      
+
       # Don't use -or-create here
       # A missing workspace means the branch was never deployed
       # so there is nothing to destroy
