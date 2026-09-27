@@ -5,3 +5,4 @@ output "ecr_repository_urls" {
   value       = module.ecr.repository_urls
 }
 output "api_function_name" { value = module.api.function_name }
+output "api_endpoint" { value = module.api.api_endpoint }
