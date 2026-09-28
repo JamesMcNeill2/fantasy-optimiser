@@ -1,12 +1,19 @@
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from mangum import Mangum
 
-app = FastAPI()
+router = APIRouter(prefix="/api")
 
 
-@app.get("/api/health")
-def health():
+@router.get("/health")
+def health() -> dict[str, str]:
     return {"status": "ok"}
 
+
+app = FastAPI(
+    title="Fantasy Lineup Optimiser API",
+    docs_url="/api/docs",
+    openapi_url="/api/openapi.json",
+)
+app.include_router(router)
 
 handler = Mangum(app, lifespan="off")

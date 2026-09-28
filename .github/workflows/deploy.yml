@@ -19,6 +19,8 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      TF_VAR_image_tag: ${{ github.sha }}
     defaults:
       run:
         working-directory: infra/live
@@ -114,7 +116,7 @@ jobs:
         env:
           API_REPO: ${{ steps.ecr.outputs.api }}
           BATCH_REPO: ${{ steps.ecr.outputs.batch }}
-          TAG: ${{ github.sha }}
+          TAG: ${{ env.TF_VAR_image_tag }}
         run: |
           build_and_push() {
             local svc=$1 repo=$2
