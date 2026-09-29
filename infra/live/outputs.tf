@@ -7,3 +7,4 @@ output "ecr_repository_urls" {
 output "api_function_name" { value = module.api.function_name }
 output "api_endpoint" { value = module.api.api_endpoint }
 output "batch_function_name" { value = module.batch.function_name }
+output "batch_schedule_name" { value = module.batch.schedule_name }

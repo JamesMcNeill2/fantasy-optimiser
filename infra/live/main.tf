@@ -35,4 +35,6 @@ module "batch" {
   players_table_arn  = module.data_store.players_table_arn
   users_table_name   = module.data_store.users_table_name
   users_table_arn    = module.data_store.users_table_arn
+
+  schedule_state = startswith(terraform.workspace, "feature-") ? "DISABLED" : "ENABLED"
 }
