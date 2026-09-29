@@ -55,3 +55,19 @@ variable "memory_size" {
     error_message = "memory_size must be between 128 and 10240 MB."
   }
 }
+
+variable "schedule_expression" {
+  description = "Cron expression for EventBridge Scheduler"
+  type        = string
+  default     = "cron(0 9 ? * SUN *)"
+}
+
+variable "schedule_state" {
+  description = ""
+  type        = string
+
+  validation {
+    condition     = contains(["ENABLED", "DISABLED"], var.schedule_state)
+    error_message = "schedule_state must be ENABLED or DISABLED"
+  }
+}

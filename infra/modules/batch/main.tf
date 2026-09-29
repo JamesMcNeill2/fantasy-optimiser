@@ -1,3 +1,5 @@
+data "aws_caller_identity" "current" {}
+
 locals {
   function_name = "${var.name_prefix}-batch"
 }
@@ -69,4 +71,61 @@ resource "aws_lambda_function" "batch" {
     aws_cloudwatch_log_group.batch,
     aws_iam_role_policy.exec,
   ]
+}
+
+data "aws_iam_policy_document" "scheduler_assume_role" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["scheduler.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
+  }
+}
+
+resource "aws_iam_role" "scheduler" {
+  name               = "${var.name_prefix}-batch-scheduler"
+  assume_role_policy = data.aws_iam_policy_document.scheduler_assume_role.json
+}
+
+data "aws_iam_policy_document" "scheduler" {
+  statement {
+    effect    = "Allow"
+    actions   = ["lambda:InvokeFunction"]
+    resources = [aws_lambda_function.batch.arn]
+  }
+}
+
+resource "aws_iam_role_policy" "scheduler" {
+  # Deploy role's IamPassRolesToScheduler matches the -scheduler suffix
+  name   = "batch-scheduler"
+  role   = aws_iam_role.scheduler.name
+  policy = data.aws_iam_policy_document.scheduler.json
+}
+
+resource "aws_scheduler_schedule" "batch" {
+  name                         = "${var.name_prefix}-batch-refresh"
+  schedule_expression          = var.schedule_expression
+  schedule_expression_timezone = "Europe/London"
+  state                        = var.schedule_state
+
+  flexible_time_window {
+    mode = "OFF"
+  }
+
+  target {
+    arn      = aws_lambda_function.batch.arn
+    role_arn = aws_iam_role.scheduler.arn
+    input    = jsonencode({})
+  }
+
+  depends_on = [aws_iam_role_policy.scheduler]
 }
