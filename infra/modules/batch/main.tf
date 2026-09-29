@@ -22,6 +22,7 @@ data "aws_iam_policy_document" "assume_role" {
 }
 
 resource "aws_iam_role" "exec" {
+  # Deploy role's IamPassRolesToLambda matches the -exec suffix
   name               = "${var.name_prefix}-batch-exec"
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
 }
@@ -92,6 +93,7 @@ data "aws_iam_policy_document" "scheduler_assume_role" {
 }
 
 resource "aws_iam_role" "scheduler" {
+  # Deploy role's IamPassRolesToScheduler matches the -scheduler suffix
   name               = "${var.name_prefix}-batch-scheduler"
   assume_role_policy = data.aws_iam_policy_document.scheduler_assume_role.json
 }
@@ -105,7 +107,6 @@ data "aws_iam_policy_document" "scheduler" {
 }
 
 resource "aws_iam_role_policy" "scheduler" {
-  # Deploy role's IamPassRolesToScheduler matches the -scheduler suffix
   name   = "batch-scheduler"
   role   = aws_iam_role.scheduler.name
   policy = data.aws_iam_policy_document.scheduler.json

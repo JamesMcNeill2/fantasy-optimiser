@@ -14,7 +14,7 @@ variable "players_table_name" {
 }
 
 variable "players_table_arn" {
-  description = "ARN of the players DynamoDB table, used in the execution role's read policy"
+  description = "ARN of the players DynamoDB table, used in the execution role's write policy"
   type        = string
 }
 
@@ -24,7 +24,7 @@ variable "users_table_name" {
 }
 
 variable "users_table_arn" {
-  description = "ARN of the users DynamoDB table, used in the execution role's read policy"
+  description = "ARN of the users DynamoDB table, used in the execution role's write policy"
   type        = string
 }
 
@@ -57,17 +57,17 @@ variable "memory_size" {
 }
 
 variable "schedule_expression" {
-  description = "Cron expression for EventBridge Scheduler"
+  description = "EventBridge Scheduler expression (cron or rate), evaluated in Europe/London"
   type        = string
   default     = "cron(0 9 ? * SUN *)"
 }
 
 variable "schedule_state" {
-  description = ""
+  description = "Whether the schedule runs: ENABLED or DISABLED (the root disables it on feature workspaces)"
   type        = string
 
   validation {
     condition     = contains(["ENABLED", "DISABLED"], var.schedule_state)
-    error_message = "schedule_state must be ENABLED or DISABLED"
+    error_message = "schedule_state must be ENABLED or DISABLED."
   }
 }

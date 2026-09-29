@@ -20,6 +20,7 @@ data "aws_iam_policy_document" "assume_role" {
 }
 
 resource "aws_iam_role" "exec" {
+  # Deploy role's IamPassRolesToLambda matches the -exec suffix
   name               = "${var.name_prefix}-api-exec"
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
 }
