@@ -4,6 +4,6 @@ output "distribution_id" {
   value       = aws_cloudfront_distribution.site.id
 }
 output "distribution_domain_name" {
-  description = "CloudFront domian name, e.g. d1234abcd.cloudfront.net."
+  description = "CloudFront domain name, e.g. d1234abcd.cloudfront.net."
   value       = aws_cloudfront_distribution.site.domain_name
 }
