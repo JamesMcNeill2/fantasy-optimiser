@@ -40,7 +40,8 @@ module "batch" {
 }
 
 module "frontend" {
-  source        = "../modules/frontend"
-  name_prefix   = local.name_prefix
-  force_destroy = startswith(terraform.workspace, "feature-")
+  source            = "../modules/frontend"
+  name_prefix       = local.name_prefix
+  force_destroy     = startswith(terraform.workspace, "feature-")
+  api_origin_domain = trimprefix(module.api.api_endpoint, "https://")
 }
