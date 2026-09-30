@@ -1,4 +1,7 @@
-output "bucket_name" { value = aws_s3_bucket.site.bucket }
+output "bucket_name" {
+  description = "Name of the S3 bucket for the frontend."
+  value       = aws_s3_bucket.site.bucket
+}
 output "distribution_id" {
   description = "CloudFront distribution ID (for invalidations)"
   value       = aws_cloudfront_distribution.site.id
