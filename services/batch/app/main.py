@@ -3,6 +3,9 @@ import logging
 import os
 import time
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from mypy_boto3_dynamodb.service_resource import Table
 
 import boto3
 import httpx
@@ -131,6 +134,17 @@ def user_items(raw: list, league_id: str, refreshed_at: str) -> list:
     return users_trimmed
 
 
+def write_items(table: Table, items: list[dict]) -> int:
+    """Write items to a DynamoDB table in batches and return how many were written."""
+    count = 0
+    with table.batch_writer() as batch:
+        for item in items:
+            batch.put_item(Item=item)
+            count += 1
+
+    # Only reached once __exit__ has flushed the final partial batch successfully
+    return count
+
 def handler(event, context):
     configure_logging()
     config = load_config()
@@ -151,11 +165,13 @@ def handler(event, context):
             error_msg = f"Not enough players to write to Dynamodb. Got {len(players_trimmed_data)}, expected > 3000"
             raise ValueError(error_msg)
 
-        write_items(players_trimmed_data)
+        written = write_items(players_table, players_trimmed_data)
+        logging.info("Wrote %d players %s", written, config.players_table)
 
         # Get and trim the users data
         for league_id in config.league_ids:
             path = USERS_PATH.format(league_id=league_id)
             users_raw = fetch_json(client, path, list)
             users_trimmed_data = user_items(users_raw, league_id, refreshed_at)
-            write_items(users_trimmed_data)
+            write_items(users_table, users_trimmed_data)
+            logger.info("Wrote %d users for league %s to %s", written, league_id, config.users_table)
