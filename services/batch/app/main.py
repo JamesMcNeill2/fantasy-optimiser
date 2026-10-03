@@ -132,4 +132,30 @@ def user_items(raw: list, league_id: str, refreshed_at: str) -> list:
 
 
 def handler(event, context):
-    return {"status": "ok"}
+    configure_logging()
+    config = load_config()
+
+    dynamodb = boto3.resource("dynamodb")
+    players_table = dynamodb.Table(config.players_table)
+    users_table = dynamodb.Table(config.users_table)
+
+    # Determine time for refreshed_at
+    refreshed_at = datetime.datetime.now(datetime.UTC).isoformat()
+
+    # Get and trim the players data
+    with httpx.Client(base_url=BASE_URL, timeout=httpx.Timeout(20, connect=5)) as client:
+        player_raw = fetch_json(client, PLAYERS_PATH, dict)
+        players_trimmed_data = player_items(player_raw, refreshed_at)
+
+        if len(players_trimmed_data) < 3000:
+            error_msg = f"Not enough players to write to Dynamodb. Got {len(players_trimmed_data)}, expected > 3000"
+            raise ValueError(error_msg)
+
+        write_items(players_trimmed_data)
+
+        # Get and trim the users data
+        for league_id in config.league_ids:
+            path = USERS_PATH.format(league_id=league_id)
+            users_raw = fetch_json(client, path, list)
+            users_trimmed_data = user_items(users_raw, league_id, refreshed_at)
+            write_items(users_trimmed_data)
