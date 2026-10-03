@@ -170,22 +170,67 @@ def handler(event, context):
     # Determine time for refreshed_at
     refreshed_at = datetime.datetime.now(datetime.UTC).isoformat()
 
-    # Get and trim the players data
-    with httpx.Client(base_url=BASE_URL, timeout=httpx.Timeout(20, connect=5)) as client:
-        player_raw = fetch_json(client, PLAYERS_PATH, dict)
-        players_trimmed_data = player_items(player_raw, refreshed_at)
+    summary = {"players": None, "users": {}}
+    failures = []
 
-        if len(players_trimmed_data) < 3000:
-            error_msg = f"Not enough players to write to Dynamodb. Got {len(players_trimmed_data)}, expected > 3000"
-            raise ValueError(error_msg)
+    with httpx.Client(
+        base_url=BASE_URL, timeout=httpx.Timeout(20, connect=5)
+    ) as client:
+        players_start = time.perf_counter()
+        try:
+            # Get and trim the players data
+            player_raw = fetch_json(client, PLAYERS_PATH, dict)
+            players_trimmed_data = player_items(player_raw, refreshed_at)
+            if len(players_trimmed_data) < 3000:
+                raise ValueError(
+                    f"Not enough players to write to Dynamodb. "
+                    f"Got: {len(players_trimmed_data)}, expected at least 3000"
+                )
 
-        written = write_items(players_table, players_trimmed_data)
-        logging.info("Wrote %d players %s", written, config.players_table)
+            # Write players to DynamoDB
+            players_written = write_items(players_table, players_trimmed_data)
+            summary["players"] = players_written
+            logger.info(
+                "Wrote %d players to %s in %.2fs",
+                players_written,
+                config.players_table,
+                time.perf_counter() - players_start,
+            )
+        except Exception:
+            failures.append("players")
+            logger.exception(
+                "Players refresh failed after %.2fs",
+                time.perf_counter() - players_start,
+            )
 
-        # Get and trim the users data
         for league_id in config.league_ids:
-            path = USERS_PATH.format(league_id=league_id)
-            users_raw = fetch_json(client, path, list)
-            users_trimmed_data = user_items(users_raw, league_id, refreshed_at)
-            write_items(users_table, users_trimmed_data)
-            logger.info("Wrote %d users for league %s to %s", written, league_id, config.users_table)
+            users_start = time.perf_counter()
+            try:
+                # Get and trim the users data
+                path = USERS_PATH.format(league_id=league_id)
+                users_raw = fetch_json(client, path, list)
+                users_trimmed_data = user_items(users_raw, league_id, refreshed_at)
+
+                # Write users to DynamoDB
+                users_written = write_items(users_table, users_trimmed_data)
+                summary["users"][league_id] = users_written
+                logger.info(
+                    "Wrote %d users for league %s to %s in %.2fs",
+                    users_written,
+                    league_id,
+                    config.users_table,
+                    time.perf_counter() - users_start,
+                )
+            except Exception:
+                failures.append(f"users:{league_id}")
+                logger.exception(
+                    "Users refresh failed for league %s after %.2fs",
+                    league_id,
+                    time.perf_counter() - users_start,
+                )
+
+    logger.info("Run summary: %s", summary)
+    if failures:
+        raise BatchRunError(f"Batch run failed for: {', '.join(failures)}")
+
+    return summary
