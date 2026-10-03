@@ -94,5 +94,42 @@ def fetch_json(client: httpx.Client, path: str, expected_type: type):
 
     return data
 
+def player_items(raw: dict, refreshed_at: str) -> list:
+    # Only return the fields required from the /players response
+    players_trimmed = []
+    for player_id, player_data in raw.items():
+        position = player_data.get("position")
+        if position in FANTASY_POSITIONS:
+            player = {
+                "player_id": player_id,
+                "first_name": player_data.get("first_name"),
+                "last_name": player_data.get("last_name"),
+                "position": position,
+                "team": player_data.get("team"),
+                "injury_status": player_data.get("injury_status"),
+                "refreshed_at": refreshed_at,
+            }
+            players_trimmed.append(player)
+    return players_trimmed
+
+
+def user_items(raw: list, league_id: str, refreshed_at: str) -> list:
+    # Only return the fields required from the /users response
+    users_trimmed = []
+    for user_data in raw:
+        metadata = user_data.get("metadata") or {}
+        team_name = metadata.get("team_name")
+        user = {
+            "league_id": league_id,
+            "user_id": user_data.get("user_id"),
+            "display_name": user_data.get("display_name"),
+            "team_name": team_name,
+            "refreshed_at": refreshed_at,
+        }
+        users_trimmed.append(user)
+
+    return users_trimmed
+
+
 def handler(event, context):
     return {"status": "ok"}
