@@ -40,6 +40,11 @@ def configure_logging() -> None:
             handlers=[logging.StreamHandler()],
         )
 
+
+class BatchRunError(Exception):
+    """Raised at the end of a run when any dataset failed to refresh"""
+
+
 class ConfigError(Exception):
     """Raised when required configuration is missing or invalid"""
 
