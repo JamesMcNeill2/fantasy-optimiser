@@ -66,5 +66,33 @@ def load_config() -> Config:
         users_table=values["USERS_TABLE"]
     )
 
+def fetch_json(client: httpx.Client, path: str, expected_type: type):
+
+    # Query the url for a response and store it
+    response = client.get(path)
+    response.raise_for_status()
+
+    # Parse returned data and determine the amount of time this took
+    start = time.perf_counter()
+    data = response.json()
+    parse_seconds = time.perf_counter() - start
+
+    logger.info(
+        "Fetched %s: status=%s bytes=%s download=%.2fs, parse=%.2fs",
+        path,
+        response.status_code,
+        len(response.content),
+        response.elapsed.total_seconds(),
+        parse_seconds,
+    )
+
+    # Check the response is of the expected data type
+    if not isinstance(data, expected_type):
+        raise TypeError(
+            f"Expected {expected_type.__name__} from {path}, got {type(data).__name__}"
+        )
+
+    return data
+
 def handler(event, context):
     return {"status": "ok"}
