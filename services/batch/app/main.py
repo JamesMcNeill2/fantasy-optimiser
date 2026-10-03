@@ -4,6 +4,7 @@ import os
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from mypy_boto3_dynamodb.service_resource import Table
 
@@ -17,6 +18,7 @@ PLAYERS_PATH = "/players/nfl/nope"
 USERS_PATH = "/league/{league_id}/users"
 
 logger = logging.getLogger(__name__)
+
 
 def configure_logging() -> None:
     """Configure logging for both Lambda and local execution."""
@@ -41,11 +43,13 @@ def configure_logging() -> None:
 class ConfigError(Exception):
     """Raised when required configuration is missing or invalid"""
 
+
 @dataclass(frozen=True)
 class Config:
     players_table: str
     users_table: str
     league_ids: tuple[str, ...]
+
 
 def load_config() -> Config:
     names = ("LEAGUE_IDS", "PLAYERS_TABLE", "USERS_TABLE")
@@ -53,12 +57,14 @@ def load_config() -> Config:
 
     missing = [name for name, value in values.items() if not value]
     if missing:
-        raise ConfigError(f"Missing required environment variables {', '.join(missing)}")
+        raise ConfigError(
+            f"Missing required environment variables {', '.join(missing)}"
+        )
 
     league_ids = tuple(
         part.strip() for part in values["LEAGUE_IDS"].split(",") if part.strip()
     )
-    if not league_ids or not all (lid.isdigit() for lid in league_ids):
+    if not league_ids or not all(lid.isdigit() for lid in league_ids):
         raise ConfigError(
             f"LEAGUE_IDS must be a comma-separated list of numeric IDs, got {values['LEAGUE_IDS']!r}"
         )
@@ -66,8 +72,9 @@ def load_config() -> Config:
     return Config(
         league_ids=league_ids,
         players_table=values["PLAYERS_TABLE"],
-        users_table=values["USERS_TABLE"]
+        users_table=values["USERS_TABLE"],
     )
+
 
 def fetch_json(client: httpx.Client, path: str, expected_type: type):
 
@@ -96,6 +103,7 @@ def fetch_json(client: httpx.Client, path: str, expected_type: type):
         )
 
     return data
+
 
 def player_items(raw: dict, refreshed_at: str) -> list:
     # Only return the fields required from the /players response
@@ -144,6 +152,7 @@ def write_items(table: Table, items: list[dict]) -> int:
 
     # Only reached once __exit__ has flushed the final partial batch successfully
     return count
+
 
 def handler(event, context):
     configure_logging()
