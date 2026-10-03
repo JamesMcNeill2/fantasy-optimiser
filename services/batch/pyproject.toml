@@ -6,3 +6,8 @@ dependencies = [
     "boto3>=1.43.101",
     "httpx>=0.28.1",
 ]
+
+[dependency-groups]
+dev = [
+    "boto3-stubs[dynamodb]>=1.43.108",
+]
