@@ -71,6 +71,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "boto3-stubs", extra = ["dynamodb"] },
+    { name = "pytest" },
 ]
 
 [package.metadata]
@@ -80,7 +81,10 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "boto3-stubs", extras = ["dynamodb"], specifier = ">=1.43.108" }]
+dev = [
+    { name = "boto3-stubs", extras = ["dynamodb"], specifier = ">=1.43.108" },
+    { name = "pytest", specifier = ">=9.1.1" },
+]
 
 [[package]]
 name = "boto3"
