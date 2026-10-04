@@ -131,3 +131,9 @@ resource "aws_scheduler_schedule" "batch" {
 
   depends_on = [aws_iam_role_policy.scheduler]
 }
+
+resource "aws_lambda_function_event_invoke_config" "batch" {
+  function_name                = aws_lambda_function.batch.function_name
+  maximum_retry_attempts       = 0
+  maximum_event_age_in_seconds = 3600
+}
