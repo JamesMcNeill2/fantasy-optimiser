@@ -15,6 +15,7 @@ concurrency:
 env:
   TF_IN_AUTOMATION: "true"
   TF_INPUT: "false"
+  TF_VAR_league_ids: ${{ secrets.LEAGUE_IDS }}
 
 jobs:
   deploy:
