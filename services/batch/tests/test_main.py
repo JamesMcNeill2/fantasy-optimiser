@@ -3,7 +3,6 @@ from pathlib import Path
 
 import httpx
 import pytest
-
 from app.main import ConfigError, fetch_json, load_config, player_items, user_items
 
 FIXTURES = Path(__file__).parent / "fixtures"
