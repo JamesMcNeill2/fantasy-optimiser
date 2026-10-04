@@ -14,7 +14,7 @@ import httpx
 FANTASY_POSITIONS = {"QB", "RB", "WR", "TE", "K", "DEF"}
 
 BASE_URL = "https://api.sleeper.app/v1"
-PLAYERS_PATH = "/players/nfl/nope"
+PLAYERS_PATH = "/players/nfl"
 USERS_PATH = "/league/{league_id}/users"
 
 logger = logging.getLogger(__name__)
