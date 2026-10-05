@@ -71,3 +71,9 @@ variable "schedule_state" {
     error_message = "schedule_state must be ENABLED or DISABLED."
   }
 }
+
+variable "league_ids" {
+  description = "Sleeper league IDs, passed to the Lambda as LEAGUE_IDS"
+  type        = list(string)
+  sensitive   = true
+}
