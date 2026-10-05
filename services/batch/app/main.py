@@ -21,14 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 def configure_logging() -> None:
-    """Configure logging for both Lambda and local execution.
-
-    Args:
-        None.
-
-    Returns:
-        None.
-    """
+    """Configure logging for both Lambda and local execution."""
 
     root = logging.getLogger()
 
@@ -64,13 +57,15 @@ class Config:
 
 
 def load_config() -> Config:
-    """Load and validate required settings from environment variables.
-
-    Args:
-        None.
+    """
+    Load and validate required settings from environment variables.
 
     Returns:
         Config: Validated application configuration loaded from the environment.
+
+    Raises:
+        ConfigError: If any required environment variable is missing or if
+            LEAGUE_IDS is not a comma-separated list of numeric IDs.
     """
 
     names = ("LEAGUE_IDS", "PLAYERS_TABLE", "USERS_TABLE")
@@ -98,7 +93,8 @@ def load_config() -> Config:
 
 
 def fetch_json[T](client: httpx.Client, path: str, expected_type: type[T]) -> T:
-    """Fetch JSON from the API and verify that it has the expected type.
+    """
+    Fetch JSON from the API and verify that it has the expected type.
 
     Args:
         client: HTTP client to use for the request.
@@ -106,7 +102,11 @@ def fetch_json[T](client: httpx.Client, path: str, expected_type: type[T]) -> T:
         expected_type: Python type expected for the decoded JSON payload.
 
     Returns:
-        object: The decoded JSON payload from the API.
+        T: The decoded JSON payload, an instance of expected_type.
+
+    Raises:
+        httpx.HTTPStatusError: If the API request fails with a non-2xx status code.
+        TypeError: If the decoded JSON payload is not an instance of expected_type.
     """
 
     # Query the url for a response and store it
@@ -137,7 +137,8 @@ def fetch_json[T](client: httpx.Client, path: str, expected_type: type[T]) -> T:
 
 
 def player_items(raw: dict, refreshed_at: str) -> list[dict]:
-    """Return trimmed player records for supported fantasy positions.
+    """
+    Return trimmed player records for supported fantasy positions.
 
     Args:
         raw: Raw player payload from the Sleeper API.
@@ -147,7 +148,6 @@ def player_items(raw: dict, refreshed_at: str) -> list[dict]:
         list[dict]: Player records trimmed to the fields required for storage.
     """
 
-    # Only return the fields required from the /players response
     players_trimmed = []
     for player_id, player_data in raw.items():
         position = player_data.get("position")
@@ -166,7 +166,8 @@ def player_items(raw: dict, refreshed_at: str) -> list[dict]:
 
 
 def user_items(raw: list, league_id: str, refreshed_at: str) -> list[dict]:
-    """Return trimmed user records associated with the given league.
+    """
+    Return trimmed user records associated with the given league.
 
     Args:
         raw: Raw user payload for a league from the Sleeper API.
@@ -177,7 +178,6 @@ def user_items(raw: list, league_id: str, refreshed_at: str) -> list[dict]:
         list[dict]: User records trimmed to the fields required for storage.
     """
 
-    # Only return the fields required from the /users response
     users_trimmed = []
     for user_data in raw:
         metadata = user_data.get("metadata") or {}
@@ -195,7 +195,8 @@ def user_items(raw: list, league_id: str, refreshed_at: str) -> list[dict]:
 
 
 def write_items(table: Table, items: list[dict]) -> int:
-    """Write items to a DynamoDB table and return the number written.
+    """
+    Write items to a DynamoDB table and return the number written.
 
     Args:
         table: DynamoDB table resource to write into.
@@ -216,7 +217,8 @@ def write_items(table: Table, items: list[dict]) -> int:
 
 
 def handler(event, context):
-    """Refresh player and league-user data, then return write counts.
+    """
+    Refresh player and league-user data, then return write counts.
 
     Args:
         event: Lambda event payload.
@@ -224,6 +226,14 @@ def handler(event, context):
 
     Returns:
         dict: A summary of the number of player and user records written.
+
+    Raises:
+        ValueError: If the fetched players payload is below the minimum
+            expected size, or if a required record transform fails.
+        httpx.HTTPError: If a request to the Fantasy API fails while fetching
+            the player or league-user data.
+        Exception: If a DynamoDB write or other unexpected processing step fails
+            before it can be handled by the internal retry-and-log logic.
     """
 
     configure_logging()
