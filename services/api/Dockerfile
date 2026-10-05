@@ -1,6 +1,6 @@
 FROM ghcr.io/astral-sh/uv:0.12.19 AS uv
 
-FROM public.ecr.aws/lambda/python:3.14@sha256:f150a58e82583badd82e6f7019a612931dd2a4122e469b971640658023ce710f
+FROM public.ecr.aws/lambda/python:3.14@sha256:6125964ce82132304d80509b7c8a43eead5c867d34c5289624c5a2fbaedb6deb
 
 COPY --from=uv /uv /bin/uv
 
