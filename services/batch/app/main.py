@@ -110,7 +110,7 @@ def fetch_json(client: httpx.Client, path: str, expected_type: type):
     return data
 
 
-def player_items(raw: dict, refreshed_at: str) -> list:
+def player_items(raw: dict, refreshed_at: str) -> list[dict]:
     # Only return the fields required from the /players response
     players_trimmed = []
     for player_id, player_data in raw.items():
@@ -129,7 +129,7 @@ def player_items(raw: dict, refreshed_at: str) -> list:
     return players_trimmed
 
 
-def user_items(raw: list, league_id: str, refreshed_at: str) -> list:
+def user_items(raw: list, league_id: str, refreshed_at: str) -> list[dict]:
     # Only return the fields required from the /users response
     users_trimmed = []
     for user_data in raw:
