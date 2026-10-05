@@ -15,13 +15,13 @@ concurrency:
 env:
   TF_IN_AUTOMATION: "true"
   TF_INPUT: "false"
-  TF_VAR_league_ids: ${{ secrets.LEAGUE_IDS }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
       TF_VAR_image_tag: ${{ github.sha }}
+      TF_VAR_league_ids: ${{ secrets.LEAGUE_IDS }}
     defaults:
       run:
         working-directory: infra/live
