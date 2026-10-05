@@ -5,11 +5,11 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from mypy_boto3_dynamodb.service_resource import Table
-
 import boto3
 import httpx
+
+if TYPE_CHECKING:
+    from mypy_boto3_dynamodb.service_resource import Table
 
 FANTASY_POSITIONS = {"QB", "RB", "WR", "TE", "K", "DEF"}
 
