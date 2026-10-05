@@ -183,7 +183,7 @@ def handler(event, context):
             players_trimmed_data = player_items(player_raw, refreshed_at)
             if len(players_trimmed_data) < 3000:
                 raise ValueError(
-                    f"Not enough players to write to Dynamodb. "
+                    f"Not enough players to write to DynamoDB. "
                     f"Got: {len(players_trimmed_data)}, expected at least 3000"
                 )
 
