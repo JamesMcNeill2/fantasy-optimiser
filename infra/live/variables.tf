@@ -17,6 +17,6 @@ variable "league_ids" {
     condition = length(var.league_ids) > 0 && alltrue([
       for id in var.league_ids : can(regex("^[0-9]+$", id))
     ])
-    error_message = "league_ids must not be a non-empty list of numeric Sleeper league IDs"
+    error_message = "league_ids must be a non-empty list of numeric Sleeper league IDs."
   }
 }
