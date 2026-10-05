@@ -21,7 +21,14 @@ logger = logging.getLogger(__name__)
 
 
 def configure_logging() -> None:
-    """Configure logging for both Lambda and local execution."""
+    """Configure logging for both Lambda and local execution.
+
+    Args:
+        None.
+
+    Returns:
+        None.
+    """
 
     root = logging.getLogger()
 
@@ -57,6 +64,15 @@ class Config:
 
 
 def load_config() -> Config:
+    """Load and validate required settings from environment variables.
+
+    Args:
+        None.
+
+    Returns:
+        Config: Validated application configuration loaded from the environment.
+    """
+
     names = ("LEAGUE_IDS", "PLAYERS_TABLE", "USERS_TABLE")
     values = {name: os.environ.get(name, "").strip() for name in names}
 
@@ -81,7 +97,17 @@ def load_config() -> Config:
     )
 
 
-def fetch_json(client: httpx.Client, path: str, expected_type: type):
+def fetch_json[T](client: httpx.Client, path: str, expected_type: type[T]) -> T:
+    """Fetch JSON from the API and verify that it has the expected type.
+
+    Args:
+        client: HTTP client to use for the request.
+        path: Relative API path to request.
+        expected_type: Python type expected for the decoded JSON payload.
+
+    Returns:
+        object: The decoded JSON payload from the API.
+    """
 
     # Query the url for a response and store it
     response = client.get(path)
@@ -111,6 +137,16 @@ def fetch_json(client: httpx.Client, path: str, expected_type: type):
 
 
 def player_items(raw: dict, refreshed_at: str) -> list[dict]:
+    """Return trimmed player records for supported fantasy positions.
+
+    Args:
+        raw: Raw player payload from the Sleeper API.
+        refreshed_at: Timestamp indicating when the data was refreshed.
+
+    Returns:
+        list[dict]: Player records trimmed to the fields required for storage.
+    """
+
     # Only return the fields required from the /players response
     players_trimmed = []
     for player_id, player_data in raw.items():
@@ -130,6 +166,17 @@ def player_items(raw: dict, refreshed_at: str) -> list[dict]:
 
 
 def user_items(raw: list, league_id: str, refreshed_at: str) -> list[dict]:
+    """Return trimmed user records associated with the given league.
+
+    Args:
+        raw: Raw user payload for a league from the Sleeper API.
+        league_id: League identifier to assign to each returned user record.
+        refreshed_at: Timestamp indicating when the data was refreshed.
+
+    Returns:
+        list[dict]: User records trimmed to the fields required for storage.
+    """
+
     # Only return the fields required from the /users response
     users_trimmed = []
     for user_data in raw:
@@ -148,7 +195,16 @@ def user_items(raw: list, league_id: str, refreshed_at: str) -> list[dict]:
 
 
 def write_items(table: Table, items: list[dict]) -> int:
-    """Write items to a DynamoDB table in batches and return how many were written."""
+    """Write items to a DynamoDB table and return the number written.
+
+    Args:
+        table: DynamoDB table resource to write into.
+        items: Records to write to the table.
+
+    Returns:
+        int: The number of items successfully written to the table.
+    """
+
     count = 0
     with table.batch_writer() as batch:
         for item in items:
@@ -160,6 +216,16 @@ def write_items(table: Table, items: list[dict]) -> int:
 
 
 def handler(event, context):
+    """Refresh player and league-user data, then return write counts.
+
+    Args:
+        event: Lambda event payload.
+        context: Lambda context object.
+
+    Returns:
+        dict: A summary of the number of player and user records written.
+    """
+
     configure_logging()
     config = load_config()
 
