@@ -27,6 +27,10 @@ class Tables(NamedTuple):
     players: Table
     users: Table
 
+class League(BaseModel):
+    key: int
+    name: str
+
 
 @functools.cache
 def get_config() -> Config:
