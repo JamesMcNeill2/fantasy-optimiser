@@ -27,9 +27,15 @@ class Tables(NamedTuple):
     players: Table
     users: Table
 
+
 class League(BaseModel):
     key: int
     name: str
+
+
+class Team(BaseModel):
+    roster_id: int
+    team_name: str
 
 
 @functools.cache
