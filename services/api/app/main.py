@@ -58,13 +58,31 @@ def get_sleeper_client() -> Iterator[httpx.Client]:
     with httpx.Client(base_url=BASE_URL, timeout=httpx.Timeout(5, connect=2)) as client:
         yield client
 
+
 def fetch_sleeper[T](client: httpx.Client, path: str, expected_type: type[T]) -> T:
 
     try:
         return fetch_json(client, path, expected_type)
-    except (httpx.HTTPError, json.JSONDecodeError, TypeError):
+    except httpx.HTTPError, json.JSONDecodeError, TypeError:
         logger.exception("Sleeper request failed for: %s", path)
         raise HTTPException(status_code=502, detail="Sleeper request failed") from None
+
+
+def get_league_id(
+    league_key: int, config: Annotated[Config, Depends(get_config)]
+) -> str:
+
+    if 0 <= league_key < len(config.league_ids):
+        return config.league_ids[league_key]
+    else:
+        raise HTTPException(status_code=404, detail="League not found")
+
+
+def clean_str(value: object) -> str | None:
+    if isinstance(value, str):
+        return value.strip()
+    else:
+        return None
 
 
 router = APIRouter(prefix="/api")
