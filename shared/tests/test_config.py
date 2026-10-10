@@ -7,6 +7,7 @@ def table_env(monkeypatch):
     monkeypatch.setenv("PLAYERS_TABLE", "players-table")
     monkeypatch.setenv("USERS_TABLE", "users-table")
 
+
 # Config tests
 def test_load_config_names_all_missing(monkeypatch):
     names = ("LEAGUE_IDS", "PLAYERS_TABLE", "USERS_TABLE")

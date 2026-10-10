@@ -7,6 +7,7 @@ BASE_URL = "https://api.sleeper.app/v1"
 
 logger = logging.getLogger(__name__)
 
+
 def fetch_json[T](client: httpx.Client, path: str, expected_type: type[T]) -> T:
     """
     Fetch JSON from the API and verify that it has the expected type.

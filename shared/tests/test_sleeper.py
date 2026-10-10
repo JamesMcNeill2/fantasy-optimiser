@@ -12,6 +12,7 @@ def make_client(status, payload):
     )
     return httpx.Client(transport=transport, base_url="https://sleeper.test")
 
+
 # Fetch_json() tests
 def test_fetch_json_returns_data_when_type_matches():
     payload = {"4046": {"position": "QB"}}
