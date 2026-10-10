@@ -13,6 +13,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "boto3-stubs[dynamodb]>=1.43.108",
+    "botocore[crt]>=1.43.108",
     "pytest>=9.1.1",
 ]
 
