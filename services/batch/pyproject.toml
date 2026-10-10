@@ -5,6 +5,7 @@ requires-python = ">=3.14"
 dependencies = [
     "boto3>=1.43.101",
     "httpx>=0.28.1",
+    "shared",
 ]
 
 [dependency-groups]
@@ -16,3 +17,6 @@ dev = [
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.uv.sources]
+shared = { workspace = true }
