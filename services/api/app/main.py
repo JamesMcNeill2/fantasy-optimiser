@@ -1,5 +1,49 @@
-from fastapi import APIRouter, FastAPI
+import functools
+import logging
+from collections.abc import Iterator
+from typing import TYPE_CHECKING, Annotated, NamedTuple
+
+import boto3
+import httpx
+from fastapi import APIRouter, Depends, FastAPI
 from mangum import Mangum
+from shared.config import Config, load_config
+from shared.logs import configure_logging
+from shared.sleeper import BASE_URL
+
+if TYPE_CHECKING:
+    from mypy_boto3_dynamodb.service_resource import Table
+
+configure_logging()
+
+logger = logging.getLogger(__name__)
+
+
+class Tables(NamedTuple):
+    players: Table
+    users: Table
+
+
+@functools.cache
+def get_config() -> Config:
+    return load_config()
+
+
+@functools.cache
+def get_tables() -> Tables:
+    config = get_config()
+
+    dynamodb = boto3.resource("dynamodb")
+    players_table = dynamodb.Table(config.players_table)
+    users_table = dynamodb.Table(config.users_table)
+
+    return Tables(players_table, users_table)
+
+
+def get_sleeper_client() -> Iterator[httpx.Client]:
+    with httpx.Client(base_url=BASE_URL, timeout=httpx.Timeout(5, connect=2)) as client:
+        yield client
+
 
 router = APIRouter(prefix="/api")
 
