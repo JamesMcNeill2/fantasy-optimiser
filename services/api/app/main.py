@@ -52,6 +52,14 @@ def get_sleeper_client() -> Iterator[httpx.Client]:
     with httpx.Client(base_url=BASE_URL, timeout=httpx.Timeout(5, connect=2)) as client:
         yield client
 
+def fetch_sleeper[T](client: httpx.Client, path: str, expected_type: type[T]) -> T:
+
+    try:
+        return fetch_json(client, path, expected_type)
+    except (httpx.HTTPError, json.JSONDecodeError, TypeError):
+        logger.exception("Sleeper request failed for: %s", path)
+        raise HTTPException(status_code=502, detail="Sleeper request failed") from None
+
 
 router = APIRouter(prefix="/api")
 
