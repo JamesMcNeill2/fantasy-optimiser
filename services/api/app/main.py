@@ -1,18 +1,22 @@
 import functools
+import json
 import logging
 from collections.abc import Iterator
 from typing import TYPE_CHECKING, Annotated, NamedTuple
 
 import boto3
 import httpx
-from fastapi import APIRouter, Depends, FastAPI
+from fastapi import APIRouter, Depends, FastAPI, HTTPException
 from mangum import Mangum
+from pydantic import BaseModel
 from shared.config import Config, load_config
 from shared.logs import configure_logging
-from shared.sleeper import BASE_URL
+from shared.sleeper import BASE_URL, fetch_json
 
 if TYPE_CHECKING:
     from mypy_boto3_dynamodb.service_resource import Table
+
+LEAGUE_PATH = "/league/{league_id}"
 
 configure_logging()
 
