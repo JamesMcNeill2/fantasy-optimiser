@@ -68,6 +68,22 @@ router = APIRouter(prefix="/api")
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
+@router.get("/leagues")
+def list_leagues(
+    config: Annotated[Config, Depends(get_config)],
+    client: Annotated[httpx.Client, Depends(get_sleeper_client)]
+) -> list[League]:
+
+    leagues = []
+
+    for key, league_id in enumerate(config.league_ids):
+        path = LEAGUE_PATH.format(league_id=league_id)
+        data = fetch_sleeper(client, path, dict)
+        name = data.get("name") or f"League {key + 1}"
+        leagues.append(League(key=key, name=name))
+
+    return leagues
+
 
 app = FastAPI(
     title="Fantasy Lineup Optimiser API",
