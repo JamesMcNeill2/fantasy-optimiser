@@ -7,6 +7,7 @@ dependencies = [
     "fastapi>=0.141.1",
     "httpx>=0.28.1",
     "mangum>=0.22.0",
+    "shared",
 ]
 
 [dependency-groups]
@@ -18,3 +19,6 @@ dev = [
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.uv.sources]
+shared = { workspace = true }

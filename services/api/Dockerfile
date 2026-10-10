@@ -12,6 +12,7 @@ ENV UV_COMPILE_BYTECODE=1
 COPY pyproject.toml uv.lock /build/
 COPY services/api/pyproject.toml /build/services/api/
 COPY services/batch/pyproject.toml /build/services/batch/
+COPY shared/pyproject.toml /build/shared/
 
 RUN cd /build && \
     uv export --package api --locked --no-dev --no-emit-workspace -o requirements.txt && \
@@ -20,7 +21,7 @@ RUN cd /build && \
 
 # Code last
 # Least frequently changed first
-COPY shared/ ${LAMBDA_TASK_ROOT}/shared/
+COPY shared/src/shared/ ${LAMBDA_TASK_ROOT}/shared/
 COPY services/api/app/ ${LAMBDA_TASK_ROOT}/app/
 
 CMD ["app.main.handler"]
