@@ -39,6 +39,15 @@ class Team(BaseModel):
     team_name: str
 
 
+class RosterPlayer(BaseModel):
+    player_id: str
+    starter: bool
+    reserve: bool
+
+
+class RosterResponse(BaseModel):
+    players: list[RosterPlayer]
+
 @functools.cache
 def get_config() -> Config:
     return load_config()
@@ -86,6 +95,10 @@ def clean_str(value: object) -> str | None:
         return None
 
 
+def fetch_rosters(client: httpx.Client, league_id: str) -> list:
+    return fetch_sleeper(client, ROSTERS_PATH.format(league_id=league_id), list)
+
+
 router = APIRouter(prefix="/api")
 
 
@@ -119,7 +132,7 @@ def list_teams(
     client: Annotated[httpx.Client, Depends(get_sleeper_client)],
 ) -> list[Team]:
 
-    rosters = fetch_sleeper(client, ROSTERS_PATH.format(league_id=league_id), list)
+    rosters = fetch_rosters(client, ROSTERS_PATH.format(league_id=league_id))
     response = tables.users.query(KeyConditionExpression=Key("league_id").eq(league_id))
     items = response["Items"]
     users_by_id = {item["user_id"]: item for item in items}
@@ -139,6 +152,35 @@ def list_teams(
 
     teams.sort(key=lambda team: team.team_name.casefold())
     return teams
+
+
+@router.get("/leagues/{league_key}/teams/{roster_id}/roster")
+def get_roster(
+    league_id: Annotated[str, Depends(get_league_id)],
+    roster_id: int,
+    client: Annotated[httpx.Client, Depends(get_sleeper_client)],
+) -> RosterResponse:
+
+    rosters = fetch_rosters(client, league_id)
+    roster = next((r for r in rosters if r["roster_id"] == roster_id), None)
+    if roster is None:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    player_ids = roster.get("players") or []
+    starters = set(roster.get("starters") or [])
+    reserve = set(roster.get("reserve") or [])
+
+    players = []
+    for player_id in player_ids:
+        players.append(
+            RosterPlayer(
+                player_id=player_id,
+                starter=player_id in starters,
+                reserve=player_id in reserve,
+            )
+        )
+
+    return RosterResponse(players=players)
 
 
 app = FastAPI(
