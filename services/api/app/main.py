@@ -114,6 +114,41 @@ def fetch_rosters(client: httpx.Client, league_id: str) -> list:
     return fetch_sleeper(client, ROSTERS_PATH.format(league_id=league_id), list)
 
 
+def get_players(
+    dynamodb: DynamoDBServiceResource,
+    table_name: str,
+    player_ids: list[str],
+    max_attempts: int = 3,
+) -> dict[str, dict]:
+
+    if not player_ids:
+        return {}
+
+    ids = list(dict.fromkeys(player_ids))
+    request: Mapping[str, KeysAndAttributesServiceResourceUnionTypeDef] = {
+        table_name: {"Keys": [{"player_id": pid} for pid in ids]}
+    }
+
+    found: dict[str, dict] = {}
+
+    for attempt in range(max_attempts):
+        if attempt:
+            time.sleep(0.1 * 2**attempt)
+        response = dynamodb.batch_get_item(RequestItems=request)
+        for item in response["Responses"].get(table_name, []):
+            found[str(item["player_id"])] = item
+        request = response.get("UnprocessedKeys") or {}
+        if not request:
+            break
+
+    if request:
+        logger.warning(
+            "Player lookup left keys unprocessed after %d attempts", max_attempts
+        )
+
+    return found
+
+
 router = APIRouter(prefix="/api")
 
 
