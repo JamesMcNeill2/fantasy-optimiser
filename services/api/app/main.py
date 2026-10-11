@@ -57,16 +57,22 @@ class RosterPlayer(BaseModel):
 class RosterResponse(BaseModel):
     players: list[RosterPlayer]
 
+
 @functools.cache
 def get_config() -> Config:
     return load_config()
 
 
 @functools.cache
+def get_dynamodb() -> DynamoDBServiceResource:
+    return boto3.resource("dynamodb")
+
+
+@functools.cache
 def get_tables() -> Tables:
     config = get_config()
 
-    dynamodb = boto3.resource("dynamodb")
+    dynamodb = get_dynamodb()
     players_table = dynamodb.Table(config.players_table)
     users_table = dynamodb.Table(config.users_table)
 
