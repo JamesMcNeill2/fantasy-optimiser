@@ -209,6 +209,8 @@ def get_roster(
     league_id: Annotated[str, Depends(get_league_id)],
     roster_id: int,
     client: Annotated[httpx.Client, Depends(get_sleeper_client)],
+    dynamodb: Annotated[DynamoDBServiceResource, Depends(get_dynamodb)],
+    tables: Annotated[Tables, Depends(get_tables)],
 ) -> RosterResponse:
 
     rosters = fetch_rosters(client, league_id)
@@ -220,13 +222,24 @@ def get_roster(
     starters = set(roster.get("starters") or [])
     reserve = set(roster.get("reserve") or [])
 
+    found = get_players(dynamodb, tables.players.name, player_ids)
+    missing = [pid for pid in player_ids if pid not in found]
+    if missing:
+        logger.warning("No player rows for %s", ", ".join(missing))
+
     players = []
     for player_id in player_ids:
+        details = found.get(player_id, {})
         players.append(
             RosterPlayer(
                 player_id=player_id,
                 starter=player_id in starters,
                 reserve=player_id in reserve,
+                first_name=clean_str(details.get("first_name")),
+                last_name=clean_str(details.get("last_name")),
+                position=clean_str(details.get("position")),
+                team=clean_str(details.get("team")),
+                injury_status=clean_str(details.get("injury_status")),
             )
         )
 
