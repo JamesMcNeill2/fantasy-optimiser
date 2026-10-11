@@ -47,6 +47,11 @@ class RosterPlayer(BaseModel):
     player_id: str
     starter: bool
     reserve: bool
+    first_name: str | None = None
+    last_name: str | None = None
+    position: str | None = None
+    team: str | None = None
+    injury_status: str | None = None
 
 
 class RosterResponse(BaseModel):
