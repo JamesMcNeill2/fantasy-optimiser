@@ -1,7 +1,8 @@
 import functools
 import json
 import logging
-from collections.abc import Iterator
+import time
+from collections.abc import Iterator, Mapping
 from typing import TYPE_CHECKING, Annotated, NamedTuple
 
 import boto3
@@ -15,7 +16,10 @@ from shared.logs import configure_logging
 from shared.sleeper import BASE_URL, fetch_json
 
 if TYPE_CHECKING:
-    from mypy_boto3_dynamodb.service_resource import Table
+    from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource, Table
+    from mypy_boto3_dynamodb.type_defs import (
+        KeysAndAttributesServiceResourceUnionTypeDef,
+    )
 
 LEAGUE_PATH = "/league/{league_id}"
 ROSTERS_PATH = "league/{league_id}/rosters"
