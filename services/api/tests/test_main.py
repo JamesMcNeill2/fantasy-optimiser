@@ -541,7 +541,7 @@ def test_get_week_games_with_no_games_warns_naming_the_week(caplog):
     assert games == {}
     warnings = warnings_in(caplog)
     assert len(warnings) == 1
-    assert "7" in warnings[0].getMessage()
+    assert "week=7" in warnings[0].getMessage()
 
 
 def test_get_week_games_non_list_raises_502():
