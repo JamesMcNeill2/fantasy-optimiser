@@ -52,7 +52,7 @@ class NflWeek(NamedTuple):
     Attributes:
         season: The active season identifier.
         week: The current week number.
-        season_type: The current season type, such as regular or postseason.
+        season_type: The current season type: regular, post and pre.
     """
 
     season: str
@@ -181,7 +181,7 @@ def get_sleeper_client() -> Iterator[httpx.Client]:
     """Yield a configured HTTP client for Sleeper API requests.
 
     Yields:
-        httpx.Client: A reusable Sleeper API client bound to the shared API base URL.
+        httpx.Client: A Sleeper API client for this request.
     """
     with httpx.Client(base_url=BASE_URL, timeout=httpx.Timeout(5, connect=2)) as client:
         yield client
@@ -197,7 +197,7 @@ def sleeper_failure() -> HTTPException:
 
 
 def fetch_sleeper[T](client: httpx.Client, path: str, expected_type: type[T]) -> T:
-    """Fetch JSON from the Sleeper API and convert it to the expected type.
+    """Fetch JSON from Sleeper, checking it has the expected type; any failure becomes a 502.
 
     Args:
         client: The HTTP client used for the request.
@@ -261,6 +261,9 @@ def fetch_rosters(client: httpx.Client, league_id: str) -> list:
 
     Returns:
         list: The raw roster payload returned by Sleeper.
+
+    Raises:
+        HTTPException: A 502 HTTP exception indicating the Sleeper request failed.
     """
     return fetch_sleeper(client, ROSTERS_PATH.format(league_id=league_id), list)
 
@@ -277,7 +280,7 @@ def get_players(
         dynamodb: The DynamoDB resource to query.
         table_name: The DynamoDB table name to read from.
         player_ids: The list of player IDs to resolve.
-        max_attempts: The maximum number of retry attempts for unprocessed keys.
+        max_attempts: The maximum number of attempts for unprocessed keys.
 
     Returns:
         dict[str, dict]: A mapping of player IDs to DynamoDB item payloads.
@@ -349,6 +352,9 @@ def get_week_games(client: httpx.Client, nfl_week: NflWeek) -> dict[str, WeekGam
 
     Returns:
         dict[str, WeekGame]: A mapping of team abbreviations to opponent and status data.
+
+    Raises:
+        HTTPException: A 502 HTTP exception indicating the Sleeper request failed.
     """
     # Fetch the schedule data from Sleeper
     schedule_url = SCHEDULE_URL.format(
@@ -416,6 +422,9 @@ def get_projection(
 
     Returns:
         float | None: The projected points for the player in the current week, or None when unavailable.
+
+    Raises:
+        HTTPException: A 502 HTTP exception indicating the Sleeper request failed.
     """
     # Retrieve the projected points from Sleeper
     proj_url = PROJECTION_URL.format(player_id=player_id, **nfl_week._asdict())
@@ -453,6 +462,9 @@ def get_projections(
 
     Returns:
         dict[str, float | None]: A mapping of player IDs to projected points.
+
+    Raises:
+        HTTPException: A 502 HTTP exception indicating the Sleeper request failed.
     """
     if not player_ids:
         return {}
@@ -563,6 +575,7 @@ def get_roster(
 
     Raises:
         HTTPException: If the team does not exist in the league roster.
+        HTTPException: A 502 HTTP exception indicating the Sleeper request failed.
     """
     # Acquire the rosters
     rosters = fetch_rosters(client, league_id)
