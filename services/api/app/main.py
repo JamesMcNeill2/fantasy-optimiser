@@ -131,10 +131,9 @@ def get_league_id(
 
 
 def clean_str(value: object) -> str | None:
-    if isinstance(value, str):
-        return value.strip()
-    else:
+    if not isinstance(value, str):
         return None
+    return value.strip() or None
 
 
 def fetch_rosters(client: httpx.Client, league_id: str) -> list:
