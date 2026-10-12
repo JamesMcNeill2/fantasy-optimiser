@@ -1,139 +1,27 @@
 import datetime
 import logging
-import os
 import time
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import boto3
 import httpx
+from shared.config import load_config
+from shared.logs import configure_logging
+from shared.sleeper import BASE_URL, fetch_json
 
 if TYPE_CHECKING:
     from mypy_boto3_dynamodb.service_resource import Table
 
 FANTASY_POSITIONS = {"QB", "RB", "WR", "TE", "K", "DEF"}
 
-BASE_URL = "https://api.sleeper.app/v1"
 PLAYERS_PATH = "/players/nfl"
 USERS_PATH = "/league/{league_id}/users"
 
 logger = logging.getLogger(__name__)
 
 
-def configure_logging() -> None:
-    """Configure logging for both Lambda and local execution."""
-
-    root = logging.getLogger()
-
-    if root.handlers:
-        # Set the logging for lambda
-        root.setLevel(logging.INFO)
-        for handler in root.handlers:
-            handler.setFormatter(
-                logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-            )
-    else:
-        # Set the logging for local execution
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s [%(levelname)s] %(message)s",
-            handlers=[logging.StreamHandler()],
-        )
-
-
 class BatchRunError(Exception):
     """Raised at the end of a run when any dataset failed to refresh"""
-
-
-class ConfigError(Exception):
-    """Raised when required configuration is missing or invalid"""
-
-
-@dataclass(frozen=True)
-class Config:
-    players_table: str
-    users_table: str
-    league_ids: tuple[str, ...]
-
-
-def load_config() -> Config:
-    """
-    Load and validate required settings from environment variables.
-
-    Returns:
-        Config: Validated application configuration loaded from the environment.
-
-    Raises:
-        ConfigError: If any required environment variable is missing or if
-            LEAGUE_IDS is not a comma-separated list of numeric IDs.
-    """
-
-    names = ("LEAGUE_IDS", "PLAYERS_TABLE", "USERS_TABLE")
-    values = {name: os.environ.get(name, "").strip() for name in names}
-
-    missing = [name for name, value in values.items() if not value]
-    if missing:
-        raise ConfigError(
-            f"Missing required environment variables {', '.join(missing)}"
-        )
-
-    league_ids = tuple(
-        part.strip() for part in values["LEAGUE_IDS"].split(",") if part.strip()
-    )
-    if not league_ids or not all(lid.isdigit() for lid in league_ids):
-        raise ConfigError(
-            f"LEAGUE_IDS must be a comma-separated list of numeric IDs, got {values['LEAGUE_IDS']!r}"
-        )
-
-    return Config(
-        league_ids=league_ids,
-        players_table=values["PLAYERS_TABLE"],
-        users_table=values["USERS_TABLE"],
-    )
-
-
-def fetch_json[T](client: httpx.Client, path: str, expected_type: type[T]) -> T:
-    """
-    Fetch JSON from the API and verify that it has the expected type.
-
-    Args:
-        client: HTTP client to use for the request.
-        path: Relative API path to request.
-        expected_type: Python type expected for the decoded JSON payload.
-
-    Returns:
-        T: The decoded JSON payload, an instance of expected_type.
-
-    Raises:
-        httpx.HTTPStatusError: If the API request fails with a non-2xx status code.
-        TypeError: If the decoded JSON payload is not an instance of expected_type.
-    """
-
-    # Query the url for a response and store it
-    response = client.get(path)
-    response.raise_for_status()
-
-    # Parse returned data and determine the amount of time this took
-    start = time.perf_counter()
-    data = response.json()
-    parse_seconds = time.perf_counter() - start
-
-    logger.info(
-        "Fetched %s: status=%s bytes=%s download=%.2fs, parse=%.2fs",
-        path,
-        response.status_code,
-        len(response.content),
-        response.elapsed.total_seconds(),
-        parse_seconds,
-    )
-
-    # Check the response is of the expected data type
-    if not isinstance(data, expected_type):
-        raise TypeError(
-            f"Expected {expected_type.__name__} from {path}, got {type(data).__name__}"
-        )
-
-    return data
 
 
 def player_items(raw: dict, refreshed_at: str) -> list[dict]:

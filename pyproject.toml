@@ -20,4 +20,8 @@ build-backend = "uv_build"
 dev = ["ruff", "uvicorn", "pytest"]
 
 [tool.uv.workspace]
-members = ["services/api", "services/batch"]
+members = [
+    "services/api",
+    "services/batch",
+    "shared",
+]

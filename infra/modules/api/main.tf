@@ -63,6 +63,7 @@ resource "aws_lambda_function" "api" {
     variables = {
       PLAYERS_TABLE = var.players_table_name
       USERS_TABLE   = var.users_table_name
+      LEAGUE_IDS    = join(",", var.league_ids)
     }
   }
 

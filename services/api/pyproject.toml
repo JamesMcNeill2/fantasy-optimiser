@@ -7,4 +7,21 @@ dependencies = [
     "fastapi>=0.141.1",
     "httpx>=0.28.1",
     "mangum>=0.22.0",
+    "pydantic>=2.13.5",
+    "shared",
 ]
+
+[dependency-groups]
+dev = [
+    "boto3-stubs[dynamodb]>=1.43.108",
+    "botocore[crt]>=1.43.108",
+    "httpx2>=2.13.1",
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.uv.sources]
+shared = { workspace = true }

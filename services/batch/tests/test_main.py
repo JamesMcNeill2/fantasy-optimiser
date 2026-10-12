@@ -1,9 +1,8 @@
 import json
 from pathlib import Path
 
-import httpx
 import pytest
-from app.main import ConfigError, fetch_json, load_config, player_items, user_items
+from app.main import player_items, user_items
 
 FIXTURES = Path(__file__).parent / "fixtures"
 REFRESHED_AT = "2026-10-04T08:00:00+00:00"
@@ -47,20 +46,6 @@ def players_raw():
 @pytest.fixture
 def users_raw():
     return json.loads((FIXTURES / "users_sample.json").read_text(encoding="utf-8"))
-
-
-@pytest.fixture
-def table_env(monkeypatch):
-    monkeypatch.setenv("PLAYERS_TABLE", "players-table")
-    monkeypatch.setenv("USERS_TABLE", "users-table")
-
-
-def make_client(status, payload):
-    body = json.dumps(payload).encode()
-    transport = httpx.MockTransport(
-        lambda request: httpx.Response(status, stream=httpx.ByteStream(body))
-    )
-    return httpx.Client(transport=transport, base_url="https://sleeper.test")
 
 
 # Player tests
@@ -131,81 +116,3 @@ def test_user_items_have_exactly_the_expected_keys(users_raw):
 
     for item in items:
         assert set(item) == EXPECTED_USER_KEYS
-
-
-# Fetch_json() tests
-def test_fetch_json_returns_data_when_type_matches():
-    payload = {"4046": {"position": "QB"}}
-
-    with make_client(200, payload) as client:
-        result = fetch_json(client, "/players/nfl", dict)
-
-    assert result == payload
-
-
-def test_fetch_json_raises_type_error_on_type_mismatch():
-    payload = {"4046": {"position": "QB"}}
-
-    with (
-        make_client(200, payload) as client,
-        pytest.raises(TypeError, match="got dict"),
-    ):
-        fetch_json(client, "/players/nfl", list)
-
-
-def test_fetch_json_raises_status_error_on_404_response():
-    with (
-        make_client(404, {}) as client,
-        pytest.raises(httpx.HTTPStatusError) as exc_info,
-    ):
-        fetch_json(client, "/players/nfl", dict)
-
-    assert exc_info.value.response.status_code == 404
-
-
-# Config tests
-def test_load_config_names_all_missing(monkeypatch):
-    names = ("LEAGUE_IDS", "PLAYERS_TABLE", "USERS_TABLE")
-    for name in names:
-        monkeypatch.delenv(name, raising=False)
-
-    with pytest.raises(ConfigError) as exc_info:
-        load_config()
-
-    for name in names:
-        assert name in str(exc_info.value)
-
-
-@pytest.mark.usefixtures("table_env")
-def test_load_config_cleans_league_ids(monkeypatch):
-    monkeypatch.setenv("LEAGUE_IDS", " 123, 456,")
-
-    config = load_config()
-
-    assert config.league_ids == ("123", "456")
-    assert config.players_table == "players-table"
-    assert config.users_table == "users-table"
-
-
-@pytest.mark.usefixtures("table_env")
-def test_load_config_rejects_non_numeric_league_ids(monkeypatch):
-    monkeypatch.setenv("LEAGUE_IDS", "123,abc")
-
-    with pytest.raises(ConfigError, match="numeric"):
-        load_config()
-
-
-@pytest.mark.usefixtures("table_env")
-def test_load_config_treats_whitespace_league_ids_as_missing(monkeypatch):
-    monkeypatch.setenv("LEAGUE_IDS", "   ")
-
-    with pytest.raises(ConfigError, match="Missing"):
-        load_config()
-
-
-@pytest.mark.usefixtures("table_env")
-def test_load_config_rejects_league_ids_empty_after_cleaning(monkeypatch):
-    monkeypatch.setenv("LEAGUE_IDS", ",")
-
-    with pytest.raises(ConfigError, match="numeric"):
-        load_config()

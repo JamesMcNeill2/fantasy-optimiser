@@ -255,3 +255,6 @@ backend.hcl
 
 # Git Diff
 diff.txt
+
+# Vscode Settings
+.vscode
