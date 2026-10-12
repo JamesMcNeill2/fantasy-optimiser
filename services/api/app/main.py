@@ -41,6 +41,7 @@ class Tables(NamedTuple):
         players: The players table resource.
         users: The users table resource.
     """
+
     players: Table
     users: Table
 
@@ -53,6 +54,7 @@ class NflWeek(NamedTuple):
         week: The current week number.
         season_type: The current season type, such as regular or postseason.
     """
+
     season: str
     week: int
     season_type: str
@@ -65,6 +67,7 @@ class WeekGame(NamedTuple):
         opponent: The opposing team abbreviation.
         status: The current game status string.
     """
+
     opponent: str
     status: str
 
@@ -76,6 +79,7 @@ class League(BaseModel):
         key: The configured index of the league.
         name: The display name for the league.
     """
+
     key: int
     name: str
 
@@ -87,6 +91,7 @@ class Team(BaseModel):
         roster_id: The Sleeper roster identifier.
         team_name: The display name for the team.
     """
+
     roster_id: int
     team_name: str
 
@@ -108,6 +113,7 @@ class RosterPlayer(BaseModel):
         game_status: The current game state.
         locked: Whether the player is in a locked game state.
     """
+
     player_id: str
     starter_slot: int | None = None
     reserve: bool
@@ -130,6 +136,7 @@ class RosterResponse(BaseModel):
         season: The season identifier for the roster data.
         week: The week number for the roster data.
     """
+
     players: list[RosterPlayer]
     season: str
     week: int
@@ -452,6 +459,7 @@ def get_projections(
     with ThreadPoolExecutor(max_workers=MAX_PROJECTION_WORKERS) as pool:
         points = pool.map(lambda pid: get_projection(client, nfl_week, pid), player_ids)
         return dict(zip(player_ids, points))
+
 
 # Define the root router
 router = APIRouter(prefix="/api")
