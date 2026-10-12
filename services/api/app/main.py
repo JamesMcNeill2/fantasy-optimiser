@@ -195,7 +195,7 @@ def list_leagues(
         league_data = fetch_sleeper(
             client, LEAGUE_PATH.format(league_id=league_id), dict
         )
-        name = league_data.get("name") or f"League {key + 1}"
+        name = clean_str(league_data.get("name")) or f"League {key + 1}"
         leagues.append(League(key=key, name=name))
 
     return leagues
