@@ -255,6 +255,16 @@ def get_projection(
     return float(proj_points)
 
 
+def get_projections(
+    client: httpx.Client, nfl_week: NflWeek, player_ids: list[str]
+) -> dict[str, float | None]:
+    if not player_ids:
+        return {}
+    with ThreadPoolExecutor(max_workers=MAX_PROJECTION_WORKERS) as pool:
+        points = pool.map(lambda pid: get_projection(client, nfl_week, pid), player_ids)
+        return dict(zip(player_ids, points))
+
+
 router = APIRouter(prefix="/api")
 
 
