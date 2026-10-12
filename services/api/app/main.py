@@ -35,32 +35,85 @@ logger = logging.getLogger(__name__)
 
 
 class Tables(NamedTuple):
+    """Container for the DynamoDB player and user tables.
+
+    Attributes:
+        players: The players table resource.
+        users: The users table resource.
+    """
+
     players: Table
     users: Table
 
 
 class NflWeek(NamedTuple):
+    """Metadata describing the current NFL week.
+
+    Attributes:
+        season: The active season identifier.
+        week: The current week number.
+        season_type: The current season type, such as regular or postseason.
+    """
+
     season: str
     week: int
     season_type: str
 
 
 class WeekGame(NamedTuple):
+    """Game metadata for one team in a given week.
+
+    Attributes:
+        opponent: The opposing team abbreviation.
+        status: The current game status string.
+    """
+
     opponent: str
     status: str
 
 
 class League(BaseModel):
+    """A Sleeper league summary returned by the API.
+
+    Attributes:
+        key: The configured index of the league.
+        name: The display name for the league.
+    """
+
     key: int
     name: str
 
 
 class Team(BaseModel):
+    """A team summary within a league.
+
+    Attributes:
+        roster_id: The Sleeper roster identifier.
+        team_name: The display name for the team.
+    """
+
     roster_id: int
     team_name: str
 
 
 class RosterPlayer(BaseModel):
+    """A single player entry from a roster response.
+
+    Attributes:
+        player_id: The Sleeper player identifier.
+        starter_slot: The starter slot index when the player is active.
+        reserve: Whether the player is in the reserve list.
+        first_name: The player's first name when available.
+        last_name: The player's last name when available.
+        position: The player's position.
+        team: The player's team abbreviation.
+        injury_status: The player's injury status.
+        projected_points: The projected points for the week.
+        opponent: The player's opponent for the week.
+        game_status: The current game state.
+        locked: Whether the player is in a locked game state.
+    """
+
     player_id: str
     starter_slot: int | None = None
     reserve: bool
@@ -76,6 +129,14 @@ class RosterPlayer(BaseModel):
 
 
 class RosterResponse(BaseModel):
+    """A roster response containing all players for a team.
+
+    Attributes:
+        players: The rostered players for the team.
+        season: The season identifier for the roster data.
+        week: The week number for the roster data.
+    """
+
     players: list[RosterPlayer]
     season: str
     week: int
@@ -83,16 +144,31 @@ class RosterResponse(BaseModel):
 
 @functools.cache
 def get_config() -> Config:
+    """Load and cache the application configuration.
+
+    Returns:
+        Config: The loaded application configuration.
+    """
     return load_config()
 
 
 @functools.cache
 def get_dynamodb() -> DynamoDBServiceResource:
+    """Create and cache the DynamoDB resource client.
+
+    Returns:
+        DynamoDBServiceResource: The configured DynamoDB resource.
+    """
     return boto3.resource("dynamodb")
 
 
 @functools.cache
 def get_tables() -> Tables:
+    """Resolve the configured DynamoDB tables used by the API.
+
+    Returns:
+        Tables: The players and users DynamoDB table resources.
+    """
     config = get_config()
 
     dynamodb = get_dynamodb()
@@ -103,15 +179,38 @@ def get_tables() -> Tables:
 
 
 def get_sleeper_client() -> Iterator[httpx.Client]:
+    """Yield a configured HTTP client for Sleeper API requests.
+
+    Yields:
+        httpx.Client: A reusable Sleeper API client bound to the shared API base URL.
+    """
     with httpx.Client(base_url=BASE_URL, timeout=httpx.Timeout(5, connect=2)) as client:
         yield client
 
 
 def sleeper_failure() -> HTTPException:
+    """Build a standard error response for Sleeper API failures.
+
+    Returns:
+        HTTPException: A 502 HTTP exception indicating the Sleeper request failed.
+    """
     return HTTPException(status_code=502, detail="Sleeper request failed")
 
 
 def fetch_sleeper[T](client: httpx.Client, path: str, expected_type: type[T]) -> T:
+    """Fetch JSON from the Sleeper API and convert it to the expected type.
+
+    Args:
+        client: The HTTP client used for the request.
+        path: The Sleeper API path to fetch.
+        expected_type: The type to coerce the payload into.
+
+    Returns:
+        T: The parsed payload as the expected type.
+
+    Raises:
+        HTTPException: If the request or payload handling fails.
+    """
 
     try:
         return fetch_json(client, path, expected_type)
@@ -123,6 +222,18 @@ def fetch_sleeper[T](client: httpx.Client, path: str, expected_type: type[T]) ->
 def get_league_id(
     league_key: int, config: Annotated[Config, Depends(get_config)]
 ) -> str:
+    """Resolve a configured league identifier from its numeric index.
+
+    Args:
+        league_key: The zero-based index into the configured league list.
+        config: The API configuration that owns the league IDs.
+
+    Returns:
+        str: The Sleeper league identifier for the requested key.
+
+    Raises:
+        HTTPException: If the provided league key does not exist.
+    """
 
     if 0 <= league_key < len(config.league_ids):
         return config.league_ids[league_key]
@@ -131,12 +242,29 @@ def get_league_id(
 
 
 def clean_str(value: object) -> str | None:
+    """Normalize a string field by trimming whitespace and dropping empty values.
+
+    Args:
+        value: The value to normalize.
+
+    Returns:
+        str | None: The trimmed string, or None when the value is empty or not a string.
+    """
     if not isinstance(value, str):
         return None
     return value.strip() or None
 
 
 def fetch_rosters(client: httpx.Client, league_id: str) -> list:
+    """Fetch the roster payload for a given Sleeper league.
+
+    Args:
+        client: The HTTP client used to talk to Sleeper.
+        league_id: The Sleeper league identifier.
+
+    Returns:
+        list: The raw roster payload returned by Sleeper.
+    """
     return fetch_sleeper(client, ROSTERS_PATH.format(league_id=league_id), list)
 
 
@@ -146,6 +274,17 @@ def get_players(
     player_ids: list[str],
     max_attempts: int = 3,
 ) -> dict[str, dict]:
+    """Batch-load player records for the given IDs, retrying unprocessed keys.
+
+    Args:
+        dynamodb: The DynamoDB resource to query.
+        table_name: The DynamoDB table name to read from.
+        player_ids: The list of player IDs to resolve.
+        max_attempts: The maximum number of retry attempts for unprocessed keys.
+
+    Returns:
+        dict[str, dict]: A mapping of player IDs to DynamoDB item payloads.
+    """
 
     if not player_ids:
         return {}
@@ -176,7 +315,17 @@ def get_players(
 
 
 def get_nfl_week(client: httpx.Client) -> NflWeek:
+    """Fetch the current NFL season metadata from Sleeper state data.
 
+    Args:
+        client: The HTTP client used to fetch Sleeper state.
+
+    Returns:
+        NflWeek: The current season, week, and season type.
+
+    Raises:
+        HTTPException: If the state payload does not contain valid NFL metadata.
+    """
     state = fetch_sleeper(client, STATE_PATH, dict)
     season = clean_str(state.get("season"))
     season_type = clean_str(state.get("season_type"))
@@ -190,6 +339,15 @@ def get_nfl_week(client: httpx.Client) -> NflWeek:
 
 
 def get_week_games(client: httpx.Client, nfl_week: NflWeek) -> dict[str, WeekGame]:
+    """Build a mapping of teams to their opponent and game state for the given week.
+
+    Args:
+        client: The HTTP client used to fetch the schedule.
+        nfl_week: The NFL week metadata to use when querying the schedule.
+
+    Returns:
+        dict[str, WeekGame]: A mapping of team abbreviations to opponent and status data.
+    """
     schedule_url = SCHEDULE_URL.format(
         season_type=nfl_week.season_type, season=nfl_week.season
     )
@@ -222,6 +380,15 @@ def get_week_games(client: httpx.Client, nfl_week: NflWeek) -> dict[str, WeekGam
 def describe_game(
     team: str | None, games: Mapping[str, WeekGame]
 ) -> tuple[str | None, str | None]:
+    """Return the opponent and live status for a team, if available.
+
+    Args:
+        team: The team abbreviation to inspect.
+        games: A mapping of team abbreviations to their current game metadata.
+
+    Returns:
+        tuple[str | None, str | None]: The opponent and game status, or None values when unavailable.
+    """
     if team is None or not games:
         return None, None
     game = games.get(team)
@@ -233,6 +400,16 @@ def describe_game(
 def get_projection(
     client: httpx.Client, nfl_week: NflWeek, player_id: str
 ) -> float | None:
+    """Fetch the projected points for a single player in the current week.
+
+    Args:
+        client: The HTTP client used to fetch projection data.
+        nfl_week: The NFL week context for the projection request.
+        player_id: The Sleeper player identifier.
+
+    Returns:
+        float | None: The projected points for the player in the current week, or None when unavailable.
+    """
     proj_url = PROJECTION_URL.format(player_id=player_id, **nfl_week._asdict())
     proj_data = fetch_sleeper(client, proj_url, object)
 
@@ -258,6 +435,16 @@ def get_projection(
 def get_projections(
     client: httpx.Client, nfl_week: NflWeek, player_ids: list[str]
 ) -> dict[str, float | None]:
+    """Fetch projected points for multiple players in parallel.
+
+    Args:
+        client: The HTTP client used to fetch projection data.
+        nfl_week: The NFL week context for the projections.
+        player_ids: The player IDs to fetch projections for.
+
+    Returns:
+        dict[str, float | None]: A mapping of player IDs to projected points.
+    """
     if not player_ids:
         return {}
     with ThreadPoolExecutor(max_workers=MAX_PROJECTION_WORKERS) as pool:
@@ -270,6 +457,11 @@ router = APIRouter(prefix="/api")
 
 @router.get("/health")
 def health() -> dict[str, str]:
+    """Return a simple health-check payload for the API.
+
+    Returns:
+        dict[str, str]: The API health status payload.
+    """
     return {"status": "ok"}
 
 
@@ -278,6 +470,15 @@ def list_leagues(
     config: Annotated[Config, Depends(get_config)],
     client: Annotated[httpx.Client, Depends(get_sleeper_client)],
 ) -> list[League]:
+    """List configured leagues with their display names from Sleeper.
+
+    Args:
+        config: The application configuration containing the configured league IDs.
+        client: The HTTP client used to query Sleeper.
+
+    Returns:
+        list[League]: The league definitions including display names.
+    """
 
     leagues = []
 
@@ -297,6 +498,16 @@ def list_teams(
     tables: Annotated[Tables, Depends(get_tables)],
     client: Annotated[httpx.Client, Depends(get_sleeper_client)],
 ) -> list[Team]:
+    """List all teams in a league with their resolved display names.
+
+    Args:
+        league_id: The Sleeper league identifier.
+        tables: The configured DynamoDB tables used by the API.
+        client: The HTTP client used to query Sleeper.
+
+    Returns:
+        list[Team]: The teams in the league sorted by display name.
+    """
 
     rosters = fetch_rosters(client, league_id)
     response = tables.users.query(KeyConditionExpression=Key("league_id").eq(league_id))
@@ -328,6 +539,21 @@ def get_roster(
     dynamodb: Annotated[DynamoDBServiceResource, Depends(get_dynamodb)],
     tables: Annotated[Tables, Depends(get_tables)],
 ) -> RosterResponse:
+    """Return the full player roster for a team along with current-game metadata.
+
+    Args:
+        league_id: The Sleeper league identifier.
+        roster_id: The roster identifier to fetch.
+        client: The HTTP client used to query Sleeper.
+        dynamodb: The DynamoDB resource used for player metadata lookups.
+        tables: The configured DynamoDB tables.
+
+    Returns:
+        RosterResponse: The roster payload for the requested team.
+
+    Raises:
+        HTTPException: If the team does not exist in the league roster.
+    """
 
     rosters = fetch_rosters(client, league_id)
     roster = next((r for r in rosters if r["roster_id"] == roster_id), None)

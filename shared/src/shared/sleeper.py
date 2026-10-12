@@ -14,7 +14,7 @@ def fetch_json[T](client: httpx.Client, path: str, expected_type: type[T]) -> T:
 
     Args:
         client: HTTP client to use for the request.
-        path: Relative API path to request.
+        path: Relative API path or full URL to request.
         expected_type: Python type expected for the decoded JSON payload.
 
     Returns:
