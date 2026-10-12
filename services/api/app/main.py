@@ -335,31 +335,45 @@ def get_roster(
         raise HTTPException(status_code=404, detail="Team not found")
 
     player_ids = roster.get("players") or []
-    starters = set(roster.get("starters") or [])
     reserve = set(roster.get("reserve") or [])
+    starters_slots = {
+        pid: i for i, pid in enumerate(roster.get("starters") or []) if pid != "0"
+    }
 
-    found = get_players(dynamodb, tables.players.name, player_ids)
-    missing = [pid for pid in player_ids if pid not in found]
+    nfl_week = get_nfl_week(client)
+    games = get_week_games(client, nfl_week)
+
+    players_data = get_players(
+        dynamodb, tables.players.name, player_ids, max_attempts=3
+    )
+    missing = [pid for pid in player_ids if pid not in players_data]
     if missing:
         logger.warning("No player rows for %s", ", ".join(missing))
 
+    proj_pts = get_projections(client, nfl_week, player_ids)
     players = []
     for player_id in player_ids:
-        details = found.get(player_id, {})
+        details = players_data.get(player_id, {})
+        team = clean_str(details.get("team"))
+        opponent, game_status = describe_game(team, games)
         players.append(
             RosterPlayer(
                 player_id=player_id,
-                starter=player_id in starters,
+                starter_slot=starters_slots.get(player_id),
                 reserve=player_id in reserve,
                 first_name=clean_str(details.get("first_name")),
                 last_name=clean_str(details.get("last_name")),
                 position=clean_str(details.get("position")),
-                team=clean_str(details.get("team")),
+                team=team,
                 injury_status=clean_str(details.get("injury_status")),
+                projected_points=proj_pts.get(player_id),
+                opponent=opponent,
+                game_status=game_status,
+                locked=game_status in LOCKED_STATUSES,
             )
         )
 
-    return RosterResponse(players=players)
+    return RosterResponse(players=players, season=nfl_week.season, week=nfl_week.week)
 
 
 app = FastAPI(
