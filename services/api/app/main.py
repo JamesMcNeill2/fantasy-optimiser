@@ -208,7 +208,7 @@ def list_teams(
     client: Annotated[httpx.Client, Depends(get_sleeper_client)],
 ) -> list[Team]:
 
-    rosters = fetch_rosters(client, ROSTERS_PATH.format(league_id=league_id))
+    rosters = fetch_rosters(client, league_id)
     response = tables.users.query(KeyConditionExpression=Key("league_id").eq(league_id))
     items = response["Items"]
     users_by_id = {item["user_id"]: item for item in items}
