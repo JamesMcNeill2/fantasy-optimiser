@@ -175,6 +175,20 @@ def get_players(
     return found
 
 
+def get_nfl_week(client: httpx.Client) -> NflWeek:
+
+    state = fetch_sleeper(client, STATE_PATH, dict)
+    season = clean_str(state.get("season"))
+    season_type = clean_str(state.get("season_type"))
+    display_week = state.get("display_week")
+
+    if season is None or season_type is None or type(display_week) is not int:
+        logger.error("Unexpected NFL state: %s", state)
+        raise sleeper_failure()
+
+    return NflWeek(season=season, week=display_week, season_type=season_type)
+
+
 router = APIRouter(prefix="/api")
 
 
