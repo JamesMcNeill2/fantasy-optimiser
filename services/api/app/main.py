@@ -3,6 +3,7 @@ import json
 import logging
 import time
 from collections.abc import Iterator, Mapping
+from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Annotated, NamedTuple
 
 import boto3
@@ -22,7 +23,12 @@ if TYPE_CHECKING:
     )
 
 LEAGUE_PATH = "/league/{league_id}"
-ROSTERS_PATH = "league/{league_id}/rosters"
+ROSTERS_PATH = "/league/{league_id}/rosters"
+STATE_PATH = "/state/nfl"
+PROJECTION_URL = "https://api.sleeper.com/projections/nfl/player/{player_id}?season_type={season_type}&season={season}&week={week}"
+SCHEDULE_URL = "https://api.sleeper.com/schedule/nfl/{season_type}/{season}"
+MAX_PROJECTION_WORKERS = 16
+LOCKED_STATUSES = frozenset({"in_game", "complete"})
 
 configure_logging()
 logger = logging.getLogger(__name__)
