@@ -62,17 +62,23 @@ class Team(BaseModel):
 
 class RosterPlayer(BaseModel):
     player_id: str
-    starter: bool
+    starter_slot: int | None = None
     reserve: bool
     first_name: str | None = None
     last_name: str | None = None
     position: str | None = None
     team: str | None = None
     injury_status: str | None = None
+    projected_points: float | None = None
+    opponent: str | None = None
+    game_status: str | None = None
+    locked: bool = False
 
 
 class RosterResponse(BaseModel):
     players: list[RosterPlayer]
+    season: str
+    week: int
 
 
 @functools.cache
