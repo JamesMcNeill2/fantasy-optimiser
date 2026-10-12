@@ -107,13 +107,17 @@ def get_sleeper_client() -> Iterator[httpx.Client]:
         yield client
 
 
+def sleeper_failure() -> HTTPException:
+    return HTTPException(status_code=502, detail="Sleeper request failed")
+
+
 def fetch_sleeper[T](client: httpx.Client, path: str, expected_type: type[T]) -> T:
 
     try:
         return fetch_json(client, path, expected_type)
     except httpx.HTTPError, json.JSONDecodeError, TypeError:
         logger.exception("Sleeper request failed for: %s", path)
-        raise HTTPException(status_code=502, detail="Sleeper request failed") from None
+        raise sleeper_failure() from None
 
 
 def get_league_id(
