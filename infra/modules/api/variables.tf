@@ -55,3 +55,9 @@ variable "memory_size" {
     error_message = "memory_size must be between 128 and 10240 MB."
   }
 }
+
+variable "league_ids" {
+  description = "Sleeper league IDs, passed to the Lambda as LEAGUE_IDS"
+  type        = list(string)
+  sensitive   = true
+}
