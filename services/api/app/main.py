@@ -219,6 +219,17 @@ def get_week_games(client: httpx.Client, nfl_week: NflWeek) -> dict[str, WeekGam
     return games
 
 
+def describe_game(
+    team: str | None, games: Mapping[str, WeekGame]
+) -> tuple[str | None, str | None]:
+    if team is None or not games:
+        return None, None
+    game = games.get(team)
+    if game is None:
+        return None, "bye"
+    return game.opponent, game.status
+
+
 router = APIRouter(prefix="/api")
 
 
