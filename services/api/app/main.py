@@ -41,7 +41,6 @@ class Tables(NamedTuple):
         players: The players table resource.
         users: The users table resource.
     """
-
     players: Table
     users: Table
 
@@ -54,7 +53,6 @@ class NflWeek(NamedTuple):
         week: The current week number.
         season_type: The current season type, such as regular or postseason.
     """
-
     season: str
     week: int
     season_type: str
@@ -67,7 +65,6 @@ class WeekGame(NamedTuple):
         opponent: The opposing team abbreviation.
         status: The current game status string.
     """
-
     opponent: str
     status: str
 
@@ -79,7 +76,6 @@ class League(BaseModel):
         key: The configured index of the league.
         name: The display name for the league.
     """
-
     key: int
     name: str
 
@@ -91,7 +87,6 @@ class Team(BaseModel):
         roster_id: The Sleeper roster identifier.
         team_name: The display name for the team.
     """
-
     roster_id: int
     team_name: str
 
@@ -113,7 +108,6 @@ class RosterPlayer(BaseModel):
         game_status: The current game state.
         locked: Whether the player is in a locked game state.
     """
-
     player_id: str
     starter_slot: int | None = None
     reserve: bool
@@ -136,7 +130,6 @@ class RosterResponse(BaseModel):
         season: The season identifier for the roster data.
         week: The week number for the roster data.
     """
-
     players: list[RosterPlayer]
     season: str
     week: int
@@ -170,7 +163,6 @@ def get_tables() -> Tables:
         Tables: The players and users DynamoDB table resources.
     """
     config = get_config()
-
     dynamodb = get_dynamodb()
     players_table = dynamodb.Table(config.players_table)
     users_table = dynamodb.Table(config.users_table)
@@ -211,7 +203,6 @@ def fetch_sleeper[T](client: httpx.Client, path: str, expected_type: type[T]) ->
     Raises:
         HTTPException: If the request or payload handling fails.
     """
-
     try:
         return fetch_json(client, path, expected_type)
     except httpx.HTTPError, json.JSONDecodeError, TypeError:
@@ -234,7 +225,6 @@ def get_league_id(
     Raises:
         HTTPException: If the provided league key does not exist.
     """
-
     if 0 <= league_key < len(config.league_ids):
         return config.league_ids[league_key]
     else:
@@ -285,10 +275,11 @@ def get_players(
     Returns:
         dict[str, dict]: A mapping of player IDs to DynamoDB item payloads.
     """
-
+    # Check player_ids contains values
     if not player_ids:
         return {}
 
+    # Deduplicate requested player IDs before issuing the batch lookup
     ids = list(dict.fromkeys(player_ids))
     request: Mapping[str, KeysAndAttributesServiceResourceUnionTypeDef] = {
         table_name: {"Keys": [{"player_id": pid} for pid in ids]}
@@ -296,6 +287,7 @@ def get_players(
 
     found: dict[str, dict] = {}
 
+    # Query DynamoDB for player data
     for attempt in range(max_attempts):
         if attempt:
             time.sleep(0.1 * 2**attempt)
@@ -306,6 +298,7 @@ def get_players(
         if not request:
             break
 
+    # Log a warning if a players data hasn't been returned
     if request:
         logger.warning(
             "Player lookup left keys unprocessed after %d attempts", max_attempts
@@ -326,11 +319,13 @@ def get_nfl_week(client: httpx.Client) -> NflWeek:
     Raises:
         HTTPException: If the state payload does not contain valid NFL metadata.
     """
+    # Fetch the metadata from Sleeper
     state = fetch_sleeper(client, STATE_PATH, dict)
     season = clean_str(state.get("season"))
     season_type = clean_str(state.get("season_type"))
     display_week = state.get("display_week")
 
+    # Ensure the data has been retrieved correctly
     if season is None or season_type is None or type(display_week) is not int:
         logger.error("Unexpected NFL state: %s", state)
         raise sleeper_failure()
@@ -348,11 +343,13 @@ def get_week_games(client: httpx.Client, nfl_week: NflWeek) -> dict[str, WeekGam
     Returns:
         dict[str, WeekGame]: A mapping of team abbreviations to opponent and status data.
     """
+    # Fetch the schedule data from Sleeper
     schedule_url = SCHEDULE_URL.format(
         season_type=nfl_week.season_type, season=nfl_week.season
     )
     schedule = fetch_sleeper(client, schedule_url, list)
 
+    # Filter the schedule data to this weeks games
     games: dict[str, WeekGame] = {}
     skipped = 0
     for game in schedule:
@@ -367,8 +364,11 @@ def get_week_games(client: httpx.Client, nfl_week: NflWeek) -> dict[str, WeekGam
         games[home] = WeekGame(opponent=away, status=status)
         games[away] = WeekGame(opponent=home, status=status)
 
+    # Log any skipped games
     if skipped:
         logger.warning("Skipped %d malformed games in %s", skipped, nfl_week)
+
+    # Log if there was an error retrieving schedule data
     if not games:
         logger.warning(
             "No games found for %s (bad schedule data, not a bye week)", nfl_week
@@ -400,7 +400,7 @@ def describe_game(
 def get_projection(
     client: httpx.Client, nfl_week: NflWeek, player_id: str
 ) -> float | None:
-    """Fetch the projected points for a single player in the current week.
+    """Fetch the projected (proj) points for a single player in the current week.
 
     Args:
         client: The HTTP client used to fetch projection data.
@@ -410,9 +410,11 @@ def get_projection(
     Returns:
         float | None: The projected points for the player in the current week, or None when unavailable.
     """
+    # Retrieve the projected points from Sleeper
     proj_url = PROJECTION_URL.format(player_id=player_id, **nfl_week._asdict())
     proj_data = fetch_sleeper(client, proj_url, object)
 
+    # Ensure the data has been retrieved in the expected format
     if proj_data is None:
         return None
     if not isinstance(proj_data, dict):
@@ -451,7 +453,7 @@ def get_projections(
         points = pool.map(lambda pid: get_projection(client, nfl_week, pid), player_ids)
         return dict(zip(player_ids, points))
 
-
+# Define the root router
 router = APIRouter(prefix="/api")
 
 
@@ -479,9 +481,7 @@ def list_leagues(
     Returns:
         list[League]: The league definitions including display names.
     """
-
     leagues = []
-
     for key, league_id in enumerate(config.league_ids):
         league_data = fetch_sleeper(
             client, LEAGUE_PATH.format(league_id=league_id), dict
@@ -508,12 +508,13 @@ def list_teams(
     Returns:
         list[Team]: The teams in the league sorted by display name.
     """
-
+    # Acquire the rosters
     rosters = fetch_rosters(client, league_id)
     response = tables.users.query(KeyConditionExpression=Key("league_id").eq(league_id))
     items = response["Items"]
     users_by_id = {item["user_id"]: item for item in items}
 
+    # Resolve team names in each league
     teams = []
     for roster in rosters:
         roster_id = roster["roster_id"]
@@ -527,6 +528,7 @@ def list_teams(
                 team_name = f"Team {roster_id}"
         teams.append(Team(roster_id=roster_id, team_name=team_name))
 
+    # Sort teams into alphabetical order
     teams.sort(key=lambda team: team.team_name.casefold())
     return teams
 
@@ -554,21 +556,24 @@ def get_roster(
     Raises:
         HTTPException: If the team does not exist in the league roster.
     """
-
+    # Acquire the rosters
     rosters = fetch_rosters(client, league_id)
     roster = next((r for r in rosters if r["roster_id"] == roster_id), None)
     if roster is None:
         raise HTTPException(status_code=404, detail="Team not found")
 
+    # Define reserve and starting players
     player_ids = roster.get("players") or []
     reserve = set(roster.get("reserve") or [])
     starters_slots = {
         pid: i for i, pid in enumerate(roster.get("starters") or []) if pid != "0"
     }
 
+    # Get NFL metadata for the current week
     nfl_week = get_nfl_week(client)
     games = get_week_games(client, nfl_week)
 
+    # Get the players data from DynamoDB
     players_data = get_players(
         dynamodb, tables.players.name, player_ids, max_attempts=3
     )
@@ -576,6 +581,7 @@ def get_roster(
     if missing:
         logger.warning("No player rows for %s", ", ".join(missing))
 
+    # Create the RosterPlayer class for each player in a teams roster
     proj_pts = get_projections(client, nfl_week, player_ids)
     players = []
     for player_id in player_ids:
@@ -599,6 +605,7 @@ def get_roster(
             )
         )
 
+    # Return the completed roster for a team
     return RosterResponse(players=players, season=nfl_week.season, week=nfl_week.week)
 
 
