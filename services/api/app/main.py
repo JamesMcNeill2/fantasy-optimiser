@@ -230,6 +230,31 @@ def describe_game(
     return game.opponent, game.status
 
 
+def get_projection(
+    client: httpx.Client, nfl_week: NflWeek, player_id: str
+) -> float | None:
+    proj_url = PROJECTION_URL.format(player_id=player_id, **nfl_week._asdict())
+    proj_data = fetch_sleeper(client, proj_url, object)
+
+    if proj_data is None:
+        return None
+    if not isinstance(proj_data, dict):
+        logger.error("Unexpected projection for %s: %r", player_id, proj_data)
+        raise sleeper_failure()
+
+    proj_stats = proj_data.get("stats")
+    if not isinstance(proj_stats, dict):
+        logger.warning("No stats in projection for %s: %r", player_id, proj_stats)
+        return None
+
+    proj_points = proj_stats.get("pts_ppr")
+    if isinstance(proj_points, bool) or not isinstance(proj_points, (int, float)):
+        logger.warning("No numeric pts_ppr for %s: %r", player_id, proj_points)
+        return None
+
+    return float(proj_points)
+
+
 router = APIRouter(prefix="/api")
 
 
