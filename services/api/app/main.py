@@ -189,6 +189,36 @@ def get_nfl_week(client: httpx.Client) -> NflWeek:
     return NflWeek(season=season, week=display_week, season_type=season_type)
 
 
+def get_week_games(client: httpx.Client, nfl_week: NflWeek) -> dict[str, WeekGame]:
+    schedule_url = SCHEDULE_URL.format(
+        season_type=nfl_week.season_type, season=nfl_week.season
+    )
+    schedule = fetch_sleeper(client, schedule_url, list)
+
+    games: dict[str, WeekGame] = {}
+    skipped = 0
+    for game in schedule:
+        if not isinstance(game, dict) or game.get("week") != nfl_week.week:
+            continue
+        home = clean_str(game.get("home"))
+        away = clean_str(game.get("away"))
+        status = clean_str(game.get("status"))
+        if home is None or away is None or status is None:
+            skipped += 1
+            continue
+        games[home] = WeekGame(opponent=away, status=status)
+        games[away] = WeekGame(opponent=home, status=status)
+
+    if skipped:
+        logger.warning("Skipped %d malformed games in %s", skipped, nfl_week)
+    if not games:
+        logger.warning(
+            "No games found for %s (bad schedule data, not a bye week)", nfl_week
+        )
+
+    return games
+
+
 router = APIRouter(prefix="/api")
 
 
