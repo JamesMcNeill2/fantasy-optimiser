@@ -39,6 +39,17 @@ class Tables(NamedTuple):
     users: Table
 
 
+class NflWeek(NamedTuple):
+    season: str
+    week: int
+    season_type: str
+
+
+class WeekGame(NamedTuple):
+    opponent: str
+    status: str
+
+
 class League(BaseModel):
     key: int
     name: str
