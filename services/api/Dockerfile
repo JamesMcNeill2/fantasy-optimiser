@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:0.12.23 AS uv
+FROM ghcr.io/astral-sh/uv:0.13.1 AS uv
 
 FROM public.ecr.aws/lambda/python:3.14@sha256:6125964ce82132304d80509b7c8a43eead5c867d34c5289624c5a2fbaedb6deb
 
