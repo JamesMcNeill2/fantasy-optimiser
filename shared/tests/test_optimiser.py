@@ -9,7 +9,6 @@ import random
 from dataclasses import FrozenInstanceError, replace
 
 import pytest
-
 from shared.optimiser import (
     NO_POINTS_STATUSES,
     SLOT_ELIGIBILITY,
@@ -22,7 +21,7 @@ from shared.optimiser import (
     optimise_lineup,
     rank_key,
     selection_value,
-    starting_slots,
+    starting_positions,
     total_value,
 )
 
@@ -36,7 +35,7 @@ ALL_OPEN = list(range(9))
 BASE = LineupPlayer(
     player_id="1",
     eligible=frozenset({"RB"}),
-    proj_points=7.6,
+    projected_points=7.6,
     actual_points=None,
     game_status="pre_game",
     starter_slot=None,
@@ -68,7 +67,7 @@ def make(
     return LineupPlayer(
         player_id=player_id,
         eligible=eligible,
-        proj_points=points,
+        projected_points=points,
         actual_points=actual,
         game_status=status,
         starter_slot=slot,
@@ -183,13 +182,15 @@ def test_lineup_player_is_hashable():
     ],
 )
 def test_selection_value(points, status, expected):
-    result = selection_value(player(proj_points=points, game_status=status))
+    result = selection_value(player(projected_points=points, game_status=status))
     assert result == expected
     assert type(result) is float
 
 
 def test_selection_value_ignores_lock_and_actual_points():
-    p = player(locked=True, game_status="complete", proj_points=9.0, actual_points=13.4)
+    p = player(
+        locked=True, game_status="complete", projected_points=9.0, actual_points=13.4
+    )
     assert selection_value(p) == 9.0
 
 
@@ -210,7 +211,7 @@ def test_selection_value_ignores_lock_and_actual_points():
 )
 def test_total_value(locked, actual, points, status, expected):
     p = player(
-        locked=locked, actual_points=actual, proj_points=points, game_status=status
+        locked=locked, actual_points=actual, projected_points=points, game_status=status
     )
     result = total_value(p)
     assert result == expected
@@ -240,12 +241,12 @@ def test_pool_of_nobody_is_empty():
     assert availability_pool([]) == []
 
 
-# --- starting_slots ---------------------------------------------------------------------
+# --- starting_positions ---------------------------------------------------------------------
 
 
-def test_starting_slots_drops_bench_and_leaves_input_alone():
+def test_starting_positions_drops_bench_and_leaves_input_alone():
     layout = list(LAYOUT)
-    assert starting_slots(layout) == SLOTS
+    assert starting_positions(layout) == SLOTS
     assert layout == LAYOUT
 
 
@@ -257,8 +258,8 @@ def test_starting_slots_drops_bench_and_leaves_input_alone():
         (SLOTS, SLOTS),
     ],
 )
-def test_starting_slots_other_layouts(positions, expected):
-    assert starting_slots(list(positions)) == expected
+def test_starting_positions_other_layouts(positions, expected):
+    assert starting_positions(list(positions)) == expected
 
 
 # --- open_slots -------------------------------------------------------------------------
@@ -626,9 +627,9 @@ _POSITIONS = ["QB", "RB", "RB", "RB", "WR", "WR", "WR", "TE", "TE", "K", "DEF"]
 
 
 def _score(p: LineupPlayer) -> float:
-    if p.proj_points is None or p.game_status in ("bye", "canceled"):
+    if p.projected_points is None or p.game_status in ("bye", "canceled"):
         return 0.0
-    return p.proj_points
+    return p.projected_points
 
 
 def _best_possible(
