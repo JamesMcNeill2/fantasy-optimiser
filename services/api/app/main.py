@@ -662,7 +662,7 @@ def get_roster(
         raise HTTPException(status_code=404, detail="Team not found")
 
     # Define reserve and starting players
-    player_ids = roster.get("players") or []    # players = ["1111"] * 15
+    player_ids = roster.get("players") or []  # players = ["1111"] * 15
     reserve = set(roster.get("reserve") or [])  # reserve = ["2222"]
     # {0: 0000, 1: 1111, 2: 2222, 3: 3333, 4: 4444, 5: 5555, 6: 6666, 7: 7777, 8: DEF}
     starter_ids = {
