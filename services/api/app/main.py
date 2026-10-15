@@ -119,6 +119,7 @@ class RosterPlayer(BaseModel):
         opponent: The player's opponent for the week.
         game_status: The current game state.
         locked: Whether the player is in a locked game state.
+        actual_points: The player's points scored in the current week, when available.
     """
 
     player_id: str
@@ -137,6 +138,15 @@ class RosterPlayer(BaseModel):
 
 
 class OptimalLineup(BaseModel):
+    """The best lineup evaluated for the current roster snapshot.
+
+    Attributes:
+        starter_ids: The selected starter player identifiers in lineup order.
+        bench_ids: The bench player identifiers that were left out of the optimal lineup.
+        optimal_total: The projected total points for the optimal lineup.
+        current_total: The projected total points for the current lineup as drafted.
+    """
+
     starter_ids: list[str | None]
     bench_ids: list[str]
     optimal_total: float
@@ -150,6 +160,8 @@ class RosterResponse(BaseModel):
         players: The rostered players for the team.
         season: The season identifier for the roster data.
         week: The week number for the roster data.
+        slots: The ordered starting lineup positions for the league.
+        lineup: The optimal lineup evaluation for the roster.
     """
 
     players: list[RosterPlayer]
@@ -491,6 +503,18 @@ def get_projections(
 
 
 def get_roster_positions(client: httpx.Client, league_id: str) -> list[str]:
+    """Fetch the roster slot ordering for a Sleeper league.
+
+    Args:
+        client: The HTTP client used to query Sleeper.
+        league_id: The Sleeper league identifier.
+
+    Returns:
+        list[str]: The ordered roster positions defined by the league.
+
+    Raises:
+        HTTPException: If the league does not return a valid roster position list.
+    """
 
     league = fetch_sleeper(client, LEAGUE_PATH.format(league_id=league_id), dict)
     roster_positions = league.get("roster_positions")
@@ -516,6 +540,20 @@ def get_roster_positions(client: httpx.Client, league_id: str) -> list[str]:
 def get_actual_points(
     client: httpx.Client, league_id: str, week: int, roster_id: int
 ) -> dict[str, float | None]:
+    """Fetch actual player points for a roster in a specific matchup week.
+
+    Args:
+        client: The HTTP client used to query Sleeper.
+        league_id: The Sleeper league identifier.
+        week: The NFL week to read matchup data from.
+        roster_id: The roster identifier to inspect.
+
+    Returns:
+        dict[str, float | None]: A mapping of player IDs to actual points scored, or None when unavailable.
+
+    Raises:
+        HTTPException: If the matchup payload is malformed for the requested roster.
+    """
 
     matchups = fetch_sleeper(
         client, MATCHUPS_PATH.format(league_id=league_id, week=week), list
