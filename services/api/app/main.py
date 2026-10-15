@@ -133,6 +133,14 @@ class RosterPlayer(BaseModel):
     opponent: str | None = None
     game_status: str | None = None
     locked: bool = False
+    actual_points: float | None = None
+
+
+class OptimalLineup(BaseModel):
+    starter_ids: list[str | None]
+    bench_ids: list[str]
+    optimal_total: float
+    current_total: float
 
 
 class RosterResponse(BaseModel):
@@ -147,6 +155,8 @@ class RosterResponse(BaseModel):
     players: list[RosterPlayer]
     season: str
     week: int
+    slots: list[str]
+    lineup: OptimalLineup
 
 
 @functools.cache
