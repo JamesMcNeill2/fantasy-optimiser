@@ -662,15 +662,42 @@ def get_roster(
         raise HTTPException(status_code=404, detail="Team not found")
 
     # Define reserve and starting players
-    player_ids = roster.get("players") or []
-    reserve = set(roster.get("reserve") or [])
-    starters_slots = {
+    player_ids = roster.get("players") or []    # players = ["1111"] * 15
+    reserve = set(roster.get("reserve") or [])  # reserve = ["2222"]
+    # {0: 0000, 1: 1111, 2: 2222, 3: 3333, 4: 4444, 5: 5555, 6: 6666, 7: 7777, 8: DEF}
+    starter_ids = {
         pid: i for i, pid in enumerate(roster.get("starters") or []) if pid != "0"
     }
+
+    # ["QB", "RB", RB", "WR", "WR", "TE", "WRRB_FLEX", "K", "DEF", BN", "BN", "BN", "BN", "BN", "BN"]
+    roster_positions = get_roster_positions(client, league_id)
+    # positions = ["QB", "RB", "RB", "WR", "WR", "TE", "WRRB_FLEX", "K", "DEF"]
+    positions = starting_positions(roster_positions)
+
+    starters = roster.get("starters") or []
+    if starters and len(positions) != len(roster.get("starters")):
+        logger.error(
+            "Positions and starters have different lengths. positions: %s, starter_ids: %s",
+            len(positions),
+            len(starters),
+        )
+        raise sleeper_failure()
+
+    unknown_positions = []
+    for position in positions:
+        if position not in SLOT_ELIGIBILITY:
+            unknown_positions.append(position)
+    if unknown_positions:
+        logger.warning(
+            "%s position not in SLOT_ELIGIBILITY", ", ".join(unknown_positions)
+        )
 
     # Get NFL metadata for the current week
     nfl_week = get_nfl_week(client)
     games = get_week_games(client, nfl_week)
+
+    # actual_points = {0000: 0.0, 1111: 0.0, 2222: 7.2, 3333: 0.0, 4444: 0.0, 5555: 14.7, 6666: 0.0, 7777: 0.0, DEF: 0.0}
+    actual_points = get_actual_points(client, league_id, nfl_week.week, roster_id)
 
     # Get the players data from DynamoDB
     players_data = get_players(
@@ -682,15 +709,15 @@ def get_roster(
 
     # Create the RosterPlayer class for each player in a teams roster
     proj_pts = get_projections(client, nfl_week, player_ids)
-    players = []
+    roster_players = []
     for player_id in player_ids:
         details = players_data.get(player_id, {})
         team = clean_str(details.get("team"))
         opponent, game_status = describe_game(team, games)
-        players.append(
+        roster_players.append(
             RosterPlayer(
                 player_id=player_id,
-                starter_slot=starters_slots.get(player_id),
+                starter_slot=starter_ids.get(player_id),
                 reserve=player_id in reserve,
                 first_name=clean_str(details.get("first_name")),
                 last_name=clean_str(details.get("last_name")),
@@ -701,11 +728,44 @@ def get_roster(
                 opponent=opponent,
                 game_status=game_status,
                 locked=game_status in LOCKED_STATUSES,
+                actual_points=actual_points.get(player_id),
             )
         )
 
+    lineup_players = []
+    for player in roster_players:
+        lineup_players.append(
+            LineupPlayer(
+                player_id=player.player_id,
+                eligible=frozenset({player.position})
+                if player.position
+                else frozenset(),
+                projected_points=player.projected_points,
+                actual_points=player.actual_points,
+                game_status=player.game_status,
+                starter_slot=player.starter_slot,
+                reserve=player.reserve,
+                locked=player.locked,
+            )
+        )
+
+    optimal_lineup_tuples = optimise_lineup(roster_positions, lineup_players)
+
+    optimal_lineup = OptimalLineup(
+        starter_ids=list(optimal_lineup_tuples.starters),
+        bench_ids=list(optimal_lineup_tuples.bench),
+        optimal_total=optimal_lineup_tuples.optimal_total,
+        current_total=optimal_lineup_tuples.current_total,
+    )
+
     # Return the completed roster for a team
-    return RosterResponse(players=players, season=nfl_week.season, week=nfl_week.week)
+    return RosterResponse(
+        players=roster_players,
+        season=nfl_week.season,
+        week=nfl_week.week,
+        slots=positions,
+        lineup=optimal_lineup,
+    )
 
 
 app = FastAPI(
