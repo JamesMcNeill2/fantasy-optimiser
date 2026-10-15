@@ -515,10 +515,13 @@ def get_roster_positions(client: httpx.Client, league_id: str) -> list[str]:
     Raises:
         HTTPException: If the league does not return a valid roster position list.
     """
-
+    # Get the league specific roster slot order
+    # Eg. ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "K", "DEF", "BN", "BN", "BN", "BN", "BN", "BN"]
     league = fetch_sleeper(client, LEAGUE_PATH.format(league_id=league_id), dict)
     roster_positions = league.get("roster_positions")
 
+    # Check roster_positions is a list
+    # Error if any other data type
     if not isinstance(roster_positions, list):
         logger.error(
             "Roster positions not returned as list. Returned as: %s",
@@ -526,6 +529,8 @@ def get_roster_positions(client: httpx.Client, league_id: str) -> list[str]:
         )
         raise sleeper_failure()
 
+    # Check the roster_positions values are strings
+    # Error if any other data type
     non_str_positions = []
     for position in roster_positions:
         if not isinstance(position, str):
@@ -554,12 +559,13 @@ def get_actual_points(
     Raises:
         HTTPException: If the matchup payload is malformed for the requested roster.
     """
-
+    # Get this weeks matchups for a league
     matchups = fetch_sleeper(
         client, MATCHUPS_PATH.format(league_id=league_id, week=week), list
     )
     rosters_points = None
 
+    # Get the current actual points for a roster
     rosters_points = None
     for roster in matchups:
         if not isinstance(roster, dict):
@@ -568,10 +574,12 @@ def get_actual_points(
             rosters_points = roster
             break
 
+    # Check roster_points has values
     if rosters_points is None:
         logger.warning("Roster points not found for rosters.")
         return {}
 
+    # Get and check the points returned
     players_points = rosters_points.get("players_points")
     if not isinstance(players_points, dict):
         logger.error(
@@ -579,6 +587,7 @@ def get_actual_points(
         )
         raise sleeper_failure()
 
+    # Check and return the actual points values
     actual_points: dict[str, float | None] = {}
     for player_id, points in players_points.items():
         if isinstance(points, bool) or not isinstance(points, (int, float)):
@@ -707,11 +716,13 @@ def get_roster(
         pid: i for i, pid in enumerate(roster.get("starters") or []) if pid != "0"
     }
 
+    # Get the league appropriate starting positions
     # ["QB", "RB", RB", "WR", "WR", "TE", "WRRB_FLEX", "K", "DEF", BN", "BN", "BN", "BN", "BN", "BN"]
     roster_positions = get_roster_positions(client, league_id)
     # positions = ["QB", "RB", "RB", "WR", "WR", "TE", "WRRB_FLEX", "K", "DEF"]
     positions = starting_positions(roster_positions)
 
+    # Get and check all of the rosters current starters
     starters = roster.get("starters") or []
     if starters and len(positions) != len(roster.get("starters")):
         logger.error(
@@ -721,6 +732,7 @@ def get_roster(
         )
         raise sleeper_failure()
 
+    # Check that the positions returned are valid
     unknown_positions = []
     for position in positions:
         if position not in SLOT_ELIGIBILITY:
@@ -770,6 +782,7 @@ def get_roster(
             )
         )
 
+    # Create the LineupPlayer class for each player in the roster
     lineup_players = []
     for player in roster_players:
         lineup_players.append(
@@ -787,8 +800,8 @@ def get_roster(
             )
         )
 
+    # Get the optimal lineup for a roster and store it in a OptimalLineup
     optimal_lineup_tuples = optimise_lineup(roster_positions, lineup_players)
-
     optimal_lineup = OptimalLineup(
         starter_ids=list(optimal_lineup_tuples.starters),
         bench_ids=list(optimal_lineup_tuples.bench),

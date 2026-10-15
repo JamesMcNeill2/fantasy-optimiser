@@ -253,15 +253,18 @@ def optimise_lineup(
     Returns:
         The optimized starters, bench, optimal total, and current total.
     """
-
+    # Get all of the position information
     # ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "K", "DEF"]
     positions = starting_positions(roster_positions)
     slots_open = open_slots(positions, roster_players)  # [0, 1, 2, 3, 4, 5, 6, 7, 8]
     pool = availability_pool(roster_players)  # [Player, Player, ...]
+
+    # Decide which players deserve to be started
     chosen_players = greedy_fill(
         positions, slots_open, pool
     )  # [{0: Player, 1: Player, ...}]
 
+    # Preserve locked starters and place the optimized players in their slots
     starter_players: list[LineupPlayer | None] = [None] * len(positions)
     for player in roster_players:
         if player.locked and player.starter_slot is not None:
@@ -269,6 +272,7 @@ def optimise_lineup(
     for slot, player in chosen_players.items():
         starter_players[slot] = player
 
+    # Determine the starting player ids
     starter_ids = []
     for player in starter_players:
         if player is None:
@@ -277,23 +281,28 @@ def optimise_lineup(
             starter_ids.append(player.player_id)
     starter_ids_tuple = tuple(starter_ids)
 
+    # Determine the benched players ids
     bench_ids = []
     for player in roster_players:
         if player.player_id not in starter_ids_tuple and not player.reserve:
             bench_ids.append(player.player_id)
-
     bench_ids_tuple = tuple(bench_ids)
 
+    # Determine the optimal points total
+    # Based on the optimal lineups projected points
     optimal_total = 0.0
     for player in starter_players:
         if player is not None:
             optimal_total += total_value(player)
 
+    # Determine the current projected points total
+    # Based on the current starting lineup
     current_total = 0.0
     for player in roster_players:
         if player.starter_slot is not None:
             current_total += total_value(player)
 
+    # Create and return the Lineup class for this roster
     return Lineup(
         starters=starter_ids_tuple,
         bench=bench_ids_tuple,
