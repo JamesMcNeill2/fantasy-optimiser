@@ -165,7 +165,7 @@ def can_fill(player: LineupPlayer, slot: str) -> bool:
     return not player.eligible.isdisjoint(SLOT_ELIGIBILITY.get(slot, frozenset()))
 
 
-# Starting Slots = ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "K", "DEF"]
+# Starting Slots = ["QB", "RB", "RB", "WR", "WR", "TE", "WRRB_FLEX", "K", "DEF"]
 # Open Slots = [0, 1, 2, 3, 4, 5, 6, 7, 8]
 def fill_order(starting_slots: list[str], open_slots: list[int]) -> list[int]:
     """Order open slots from most restrictive to least restrictive.
@@ -204,7 +204,7 @@ def rank_key(player: LineupPlayer) -> tuple[float, bool, str]:
     return (points, starter, player_id)
 
 
-# Starting Slots = ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "K", "DEF"]
+# Starting Slots = ["QB", "RB", "RB", "WR", "WR", "TE", "WRRB_FLEX", "K", "DEF"]
 # Open Slots = [0, 1, 2, 3, 4, 5, 6, 7, 8]
 def greedy_fill(
     starting_slots: list[str], open_slots: list[int], pool: list[LineupPlayer]
@@ -241,20 +241,29 @@ def greedy_fill(
 def optimise_lineup(
     roster_positions: list[str], roster_players: list[LineupPlayer]
 ) -> Lineup:
-    """Build an optimized lineup and calculate its point totals.
+    """Build the optimal lineup for a roster and total its points.
 
-    Locked starters retain their slots. Available players fill open slots,
-    and remaining non-reserve players are listed on the bench.
+    Locked starters keep their slots and locked bench players stay benched. The
+    open slots are filled from unlocked, non-IR players, narrowest slot first,
+    each taking the best remaining eligible player. This is exact when every
+    player has one eligible position and the flex slots are nested.
 
     Args:
-        roster_positions: Roster slot types, including bench positions.
-        roster_players: Players currently on the roster.
+        roster_positions: The league's slot types in order, including BN
+            entries.
+        roster_players: Every player on the roster.
 
     Returns:
-        The optimized starters, bench, optimal total, and current total.
+        Lineup: Starters by slot (None for an empty slot), the bench excluding
+            IR players, and the optimal and current totals. Locked players count
+            their actual points; everyone else counts their projection.
+
+    Raises:
+        ValueError: If a locked starter's slot is outside the starting slots,
+            or two locked starters share a slot.
     """
     # Get all of the position information
-    # ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "K", "DEF"]
+    # ["QB", "RB", "RB", "WR", "WR", "TE", "WRRB_FLEX", "K", "DEF"]
     positions = starting_positions(roster_positions)
     slots_open = open_slots(positions, roster_players)  # [0, 1, 2, 3, 4, 5, 6, 7, 8]
     pool = availability_pool(roster_players)  # [Player, Player, ...]
@@ -262,7 +271,7 @@ def optimise_lineup(
     # Decide which players deserve to be started
     chosen_players = greedy_fill(
         positions, slots_open, pool
-    )  # [{0: Player, 1: Player, ...}]
+    )  # {0: Player, 1: Player, ...}
 
     # Preserve locked starters and place the optimized players in their slots
     starter_players: list[LineupPlayer | None] = [None] * len(positions)

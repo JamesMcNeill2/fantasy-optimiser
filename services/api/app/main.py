@@ -138,13 +138,18 @@ class RosterPlayer(BaseModel):
 
 
 class OptimalLineup(BaseModel):
-    """The best lineup evaluated for the current roster snapshot.
+    """The optimal lineup for a roster, with its points totals.
+
+    Both totals count locked players' actual points and everyone else's
+    projection, which is 0 for a bye, a canceled game or a missing projection.
 
     Attributes:
-        starter_ids: The selected starter player identifiers in lineup order.
-        bench_ids: The bench player identifiers that were left out of the optimal lineup.
-        optimal_total: The projected total points for the optimal lineup.
-        current_total: The projected total points for the current lineup as drafted.
+        starter_ids: Player IDs in starting-slot order, matching
+            RosterResponse.slots; None marks a slot nobody can fill.
+        bench_ids: Player IDs not in the optimal lineup, in roster order,
+            excluding IR players.
+        optimal_total: Points for the optimal lineup.
+        current_total: Points for the lineup currently set in Sleeper.
     """
 
     starter_ids: list[str | None]
@@ -516,7 +521,7 @@ def get_roster_positions(client: httpx.Client, league_id: str) -> list[str]:
         HTTPException: If the league does not return a valid roster position list.
     """
     # Get the league specific roster slot order
-    # Eg. ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "K", "DEF", "BN", "BN", "BN", "BN", "BN", "BN"]
+    # Eg. ["QB", "RB", "RB", "WR", "WR", "TE", "WRRB_FLEX", "K", "DEF", "BN", "BN", "BN", "BN", "BN", "BN"]
     league = fetch_sleeper(client, LEAGUE_PATH.format(league_id=league_id), dict)
     roster_positions = league.get("roster_positions")
 
@@ -545,25 +550,27 @@ def get_roster_positions(client: httpx.Client, league_id: str) -> list[str]:
 def get_actual_points(
     client: httpx.Client, league_id: str, week: int, roster_id: int
 ) -> dict[str, float | None]:
-    """Fetch actual player points for a roster in a specific matchup week.
+    """Fetch a team's actual points so far in the given week.
 
     Args:
         client: The HTTP client used to query Sleeper.
         league_id: The Sleeper league identifier.
         week: The NFL week to read matchup data from.
-        roster_id: The roster identifier to inspect.
+        roster_id: The roster identifier to look up.
 
     Returns:
-        dict[str, float | None]: A mapping of player IDs to actual points scored, or None when unavailable.
+        dict[str, float | None]: Points by player ID. A value that isn't a
+            number becomes None, with a warning. Empty, with a warning, if the
+            team has no matchup entry for the week.
 
     Raises:
-        HTTPException: If the matchup payload is malformed for the requested roster.
+        HTTPException: A 502 if the request fails, the response isn't a list,
+            or the team's players_points isn't a dict.
     """
     # Get this weeks matchups for a league
     matchups = fetch_sleeper(
         client, MATCHUPS_PATH.format(league_id=league_id, week=week), list
     )
-    rosters_points = None
 
     # Get the current actual points for a roster
     rosters_points = None
@@ -576,7 +583,11 @@ def get_actual_points(
 
     # Check roster_points has values
     if rosters_points is None:
-        logger.warning("Roster points not found for rosters.")
+        logger.warning(
+            "Roster points not found for rosters. Roster ID: %s, Week: %d",
+            roster_id,
+            week,
+        )
         return {}
 
     # Get and check the points returned
@@ -686,7 +697,11 @@ def get_roster(
     dynamodb: Annotated[DynamoDBServiceResource, Depends(get_dynamodb)],
     tables: Annotated[Tables, Depends(get_tables)],
 ) -> RosterResponse:
-    """Return the full player roster for a team along with current-game metadata.
+    """Return a team's roster, current-game details and optimal lineup.
+
+    Fetches the league's slot layout, this week's games and actual points from
+    Sleeper, player details from DynamoDB and projections from Sleeper, then
+    runs the lineup optimiser. Locked players keep their slots.
 
     Args:
         league_id: The Sleeper league identifier.
@@ -696,11 +711,14 @@ def get_roster(
         tables: The configured DynamoDB tables.
 
     Returns:
-        RosterResponse: The roster payload for the requested team.
+        RosterResponse: The team's players, the league's starting slot types and
+            the optimal lineup with its totals.
 
     Raises:
-        HTTPException: If the team does not exist in the league roster.
-        HTTPException: A 502 HTTP exception indicating the Sleeper request failed.
+        HTTPException: A 404 if the team is not in the league.
+        HTTPException: A 502 if a Sleeper request fails or returns unexpected
+            data, including a slot layout that doesn't match the roster's
+            starters.
     """
     # Acquire the rosters
     rosters = fetch_rosters(client, league_id)
@@ -711,22 +729,22 @@ def get_roster(
     # Define reserve and starting players
     player_ids = roster.get("players") or []  # players = ["1111"] * 15
     reserve = set(roster.get("reserve") or [])  # reserve = ["2222"]
-    # {0: 0000, 1: 1111, 2: 2222, 3: 3333, 4: 4444, 5: 5555, 6: 6666, 7: 7777, 8: DEF}
-    starter_ids = {
+    # {0000: 0, 1111: 1, 2222: 2, 3333: 3, 4444: 4, 5555: 5, 6666: 6, 7777: 7, DEF: 8}
+    slot_by_player_id = {
         pid: i for i, pid in enumerate(roster.get("starters") or []) if pid != "0"
     }
 
     # Get the league appropriate starting positions
-    # ["QB", "RB", RB", "WR", "WR", "TE", "WRRB_FLEX", "K", "DEF", BN", "BN", "BN", "BN", "BN", "BN"]
+    # ["QB", "RB", "RB", "WR", "WR", "TE", "WRRB_FLEX", "K", "DEF", "BN", "BN", "BN", "BN", "BN", "BN"]
     roster_positions = get_roster_positions(client, league_id)
     # positions = ["QB", "RB", "RB", "WR", "WR", "TE", "WRRB_FLEX", "K", "DEF"]
     positions = starting_positions(roster_positions)
 
     # Get and check all of the rosters current starters
     starters = roster.get("starters") or []
-    if starters and len(positions) != len(roster.get("starters")):
+    if starters and len(positions) != len(starters):
         logger.error(
-            "Positions and starters have different lengths. positions: %s, starter_ids: %s",
+            "Positions and starters have different lengths. positions: %s, starter: %s",
             len(positions),
             len(starters),
         )
@@ -767,7 +785,7 @@ def get_roster(
         roster_players.append(
             RosterPlayer(
                 player_id=player_id,
-                starter_slot=starter_ids.get(player_id),
+                starter_slot=slot_by_player_id.get(player_id),
                 reserve=player_id in reserve,
                 first_name=clean_str(details.get("first_name")),
                 last_name=clean_str(details.get("last_name")),
