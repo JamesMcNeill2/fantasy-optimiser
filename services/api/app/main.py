@@ -490,6 +490,29 @@ def get_projections(
         return dict(zip(player_ids, points))
 
 
+def get_roster_positions(client: httpx.Client, league_id: str) -> list[str]:
+
+    league = fetch_sleeper(client, LEAGUE_PATH.format(league_id=league_id), dict)
+    roster_positions = league.get("roster_positions")
+
+    if not isinstance(roster_positions, list):
+        logger.error(
+            "Roster positions not returned as list. Returned as: %s",
+            type(roster_positions).__name__,
+        )
+        raise sleeper_failure()
+
+    non_str_positions = []
+    for position in roster_positions:
+        if not isinstance(position, str):
+            non_str_positions.append(position)
+    if non_str_positions:
+        logger.error("Non string roster positions found: %s", non_str_positions)
+        raise sleeper_failure()
+
+    return roster_positions
+
+
 # Define the root router
 router = APIRouter(prefix="/api")
 
