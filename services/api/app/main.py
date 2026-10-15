@@ -513,6 +513,44 @@ def get_roster_positions(client: httpx.Client, league_id: str) -> list[str]:
     return roster_positions
 
 
+def get_actual_points(
+    client: httpx.Client, league_id: str, week: int, roster_id: int
+) -> dict[str, float | None]:
+
+    matchups = fetch_sleeper(
+        client, MATCHUPS_PATH.format(league_id=league_id, week=week), list
+    )
+    rosters_points = None
+
+    rosters_points = None
+    for roster in matchups:
+        if not isinstance(roster, dict):
+            continue
+        if roster.get("roster_id") == roster_id:
+            rosters_points = roster
+            break
+
+    if rosters_points is None:
+        logger.warning("Roster points not found for rosters.")
+        return {}
+
+    players_points = rosters_points.get("players_points")
+    if not isinstance(players_points, dict):
+        logger.error(
+            "Players points is not a dict. Got: %s", type(players_points).__name__
+        )
+        raise sleeper_failure()
+
+    actual_points: dict[str, float | None] = {}
+    for player_id, points in players_points.items():
+        if isinstance(points, bool) or not isinstance(points, (int, float)):
+            logger.warning("No numeric points for %s: %r", player_id, points)
+            actual_points[player_id] = None
+        else:
+            actual_points[player_id] = float(points)
+    return actual_points
+
+
 # Define the root router
 router = APIRouter(prefix="/api")
 
