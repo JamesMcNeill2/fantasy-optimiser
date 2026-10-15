@@ -50,7 +50,7 @@ class Lineup:
 
     Attributes:
         starters: Player IDs by starting slot; ``None`` marks an empty slot.
-        bench: Player IDs assigned to the bench.
+        bench: Player IDs assigned to the bench, excludes players on IR.
         optimal_total: Points from the optimized starting lineup.
         current_total: Points from the current starting lineup.
     """
@@ -64,7 +64,7 @@ class Lineup:
 def selection_value(player: LineupPlayer) -> float:
     """Return a player's projected value for lineup selection.
 
-    Players with no usable projection receive zero points.
+    Players on a bye, part of a cancelled game, or with no usable projection receive zero points.
 
     Args:
         player: Player whose projected value is being evaluated.
@@ -205,7 +205,7 @@ def rank_key(player: LineupPlayer) -> tuple[float, bool, str]:
 
 
 # Starting Slots = ["QB", "RB", "RB", "WR", "WR", "TE", "WRRB_FLEX", "K", "DEF"]
-# Open Slots = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+# Open Slots = [0, 1, 2, 3, 4, 5, 7, 8, 6]
 def greedy_fill(
     starting_slots: list[str], open_slots: list[int], pool: list[LineupPlayer]
 ) -> dict[int, LineupPlayer]:
@@ -298,14 +298,14 @@ def optimise_lineup(
     bench_ids_tuple = tuple(bench_ids)
 
     # Determine the optimal points total
-    # Based on the optimal lineups projected points
+    # Based on the optimal lineups projected points, with actual points for locked players
     optimal_total = 0.0
     for player in starter_players:
         if player is not None:
             optimal_total += total_value(player)
 
     # Determine the current projected points total
-    # Based on the current starting lineup
+    # Based on the current starting lineup, with actual points for locked players
     current_total = 0.0
     for player in roster_players:
         if player.starter_slot is not None:
