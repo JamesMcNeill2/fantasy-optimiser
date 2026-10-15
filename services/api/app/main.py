@@ -14,6 +14,12 @@ from mangum import Mangum
 from pydantic import BaseModel
 from shared.config import Config, load_config
 from shared.logs import configure_logging
+from shared.optimiser import (
+    SLOT_ELIGIBILITY,
+    LineupPlayer,
+    optimise_lineup,
+    starting_positions,
+)
 from shared.sleeper import BASE_URL, fetch_json
 
 if TYPE_CHECKING:
@@ -25,6 +31,7 @@ if TYPE_CHECKING:
 LEAGUE_PATH = "/league/{league_id}"
 ROSTERS_PATH = "/league/{league_id}/rosters"
 STATE_PATH = "/state/nfl"
+MATCHUPS_PATH = "/league/{league_id}/matchups/{week}"
 PROJECTION_URL = "https://api.sleeper.com/projections/nfl/player/{player_id}?season_type={season_type}&season={season}&week={week}"
 SCHEDULE_URL = "https://api.sleeper.com/schedule/nfl/{season_type}/{season}"
 MAX_PROJECTION_WORKERS = 16
