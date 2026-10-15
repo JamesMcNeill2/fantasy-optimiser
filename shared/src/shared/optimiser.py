@@ -23,7 +23,7 @@ NO_POINTS_STATUSES = frozenset({"bye", "canceled"})
 class LineupPlayer:
     player_id: str
     eligible: frozenset[str]  # {"RB"}
-    proj_points: float | None
+    projected_points: float | None
     actual_points: float | None
     game_status: str | None
     starter_slot: int | None
@@ -40,9 +40,9 @@ class Lineup:
 
 
 def selection_value(player: LineupPlayer) -> float:
-    if player.game_status in NO_POINTS_STATUSES or player.proj_points is None:
+    if player.game_status in NO_POINTS_STATUSES or player.projected_points is None:
         return 0.0
-    return player.proj_points
+    return player.projected_points
 
 
 def total_value(player: LineupPlayer) -> float:
@@ -55,7 +55,7 @@ def availability_pool(players: list[LineupPlayer]) -> list[LineupPlayer]:
     return [p for p in players if not p.locked and not p.reserve and p.eligible]
 
 
-def starting_slots(roster_positions: list[str]) -> list[str]:
+def starting_positions(roster_positions: list[str]) -> list[str]:
     return [slot for slot in roster_positions if slot != "BN"]
 
 
@@ -129,16 +129,15 @@ def optimise_lineup(
     roster_positions: list[str], roster_players: list[LineupPlayer]
 ) -> Lineup:
 
-    slots = starting_slots(
-        roster_positions
-    )  # ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "K", "DEF"]
-    slots_open = open_slots(slots, roster_players)  # [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    # ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "K", "DEF"]
+    positions = starting_positions(roster_positions)
+    slots_open = open_slots(positions, roster_players)  # [0, 1, 2, 3, 4, 5, 6, 7, 8]
     pool = availability_pool(roster_players)  # [Player, Player, ...]
     chosen_players = greedy_fill(
-        slots, slots_open, pool
+        positions, slots_open, pool
     )  # [{0: Player, 1: Player, ...}]
 
-    starter_players: list[LineupPlayer | None] = [None] * len(slots)
+    starter_players: list[LineupPlayer | None] = [None] * len(positions)
     for player in roster_players:
         if player.locked and player.starter_slot is not None:
             starter_players[player.starter_slot] = player
