@@ -1,8 +1,9 @@
 """Tests for the api Lambda (services/api/app/main.py).
 
 No network and no AWS: Sleeper is a MockTransport fake and DynamoDB is a pair of
-small fake classes. Run with `uv run pytest` from services/api, without
---env-file, so a missed dependency override fails instead of using real IDs.
+small fake classes. Run with `uv run python -m pytest` from services/api,
+without --env-file, so a missed dependency override fails instead of using real
+IDs.
 """
 
 import copy
@@ -21,10 +22,12 @@ from app.main import (
     WeekGame,
     clean_str,
     describe_game,
+    get_actual_points,
     get_nfl_week,
     get_players,
     get_projection,
     get_projections,
+    get_roster_positions,
     get_week_games,
 )
 from fastapi import HTTPException
@@ -74,9 +77,19 @@ SCHEDULE = [
     {"week": 4, "home": "PHI", "away": "DAL", "status": "complete", "game_id": "5"},
 ]
 
+# Six starting slots, matching the six entries in league A roster 1's starters.
+# The flex is WRRB_FLEX as in the real leagues; BN entries come last.
+LAYOUT_A = ["QB", "RB", "RB", "WR", "WR", "WRRB_FLEX", "BN", "BN", "BN", "BN"]
+SLOTS_A = ["QB", "RB", "RB", "WR", "WR", "WRRB_FLEX"]
+LAYOUT_B = ["TE", "BN"]
+
 LEAGUES = {
-    LEAGUE_A: {"league_id": LEAGUE_A, "name": " Test League A "},
-    LEAGUE_B: {"league_id": LEAGUE_B, "name": ""},
+    LEAGUE_A: {
+        "league_id": LEAGUE_A,
+        "name": " Test League A ",
+        "roster_positions": LAYOUT_A,
+    },
+    LEAGUE_B: {"league_id": LEAGUE_B, "name": "", "roster_positions": LAYOUT_B},
 }
 
 MAIN_ROSTER_PLAYERS = [
@@ -123,6 +136,40 @@ ROSTERS = {
             "players": ["2001"],
             "starters": ["2001"],
             "reserve": None,
+        },
+    ],
+}
+
+# Actual points so far this week, keyed as Sleeper does. Roster 1 isn't first,
+# so taking the first entry fails; 1007's whole-number 0 must come back as 0.0;
+# roster 3 has no entry at all.
+MATCHUPS = {
+    LEAGUE_A: [
+        {"roster_id": 2, "matchup_id": 1, "points": 0.0, "players_points": {}},
+        {
+            "roster_id": 1,
+            "matchup_id": 1,
+            "points": 9.5,
+            "players_points": {
+                "1001": 9.5,
+                "1002": 0.0,
+                "1003": 0.0,
+                "1004": 0.0,
+                "1005": 4.0,
+                "1006": 11.2,
+                "1007": 0,
+                "1008": 0.0,
+                "1009": 0.0,
+            },
+        },
+        {"roster_id": 4, "matchup_id": 2, "points": 0.0, "players_points": {}},
+    ],
+    LEAGUE_B: [
+        {
+            "roster_id": 1,
+            "matchup_id": 1,
+            "points": 0.0,
+            "players_points": {"2001": 0.0},
         },
     ],
 }
@@ -236,6 +283,10 @@ def warnings_in(caplog):
     return [r for r in caplog.records if r.levelno == logging.WARNING]
 
 
+def errors_in(caplog):
+    return [r for r in caplog.records if r.levelno == logging.ERROR]
+
+
 def assert_no_ids(response):
     """No league or user ID, and no ID field names, anywhere in the response."""
     for secret in SECRET_IDS:
@@ -263,6 +314,7 @@ class FakeSleeper:
         self.schedule = copy.deepcopy(SCHEDULE)
         self.leagues = copy.deepcopy(LEAGUES)
         self.rosters = copy.deepcopy(ROSTERS)
+        self.matchups = copy.deepcopy(MATCHUPS)
         self.projections: dict[str, dict[str, dict[str, float]] | None] = copy.deepcopy(
             PROJECTIONS
         )
@@ -291,7 +343,11 @@ class FakeSleeper:
             time.sleep(self.delays.get(player_id, 0))
             self.completed.append(player_id)
             return respond(self.projections.get(player_id))
-        if match := re.search(r"/league/(\d+)/rosters$", path):
+        if match := re.search(r"/league/(\d+)/matchups/\d+$", path):
+            league_id = match.group(1)
+            if league_id in self.matchups:
+                return respond(self.matchups[league_id])
+        elif match := re.search(r"/league/(\d+)/rosters$", path):
             league_id = match.group(1)
             if league_id in self.rosters:
                 return respond(self.rosters[league_id])
@@ -783,6 +839,125 @@ def test_get_players_single_attempt_warns_about_leftovers(sleeps, caplog):
     assert len(warnings_in(caplog)) == 1
 
 
+# --- get_roster_positions ------------------------------------------------------
+
+
+def test_get_roster_positions_returns_the_leagues_layout(sleeper):
+    with sleeper.client() as client:
+        assert get_roster_positions(client, LEAGUE_A) == LAYOUT_A
+
+    assert sleeper.requests == [f"{BASE_URL}/league/{LEAGUE_A}"]
+
+
+@pytest.mark.parametrize(
+    "league",
+    [
+        pytest.param({"name": "x"}, id="missing"),
+        pytest.param({"roster_positions": None}, id="null"),
+        pytest.param({"roster_positions": "QB,RB"}, id="string"),
+        pytest.param({"roster_positions": {"QB": 1}}, id="dict"),
+        pytest.param({"roster_positions": ["QB", 3, "RB"]}, id="int-item"),
+        pytest.param({"roster_positions": ["QB", None]}, id="null-item"),
+        pytest.param([LAYOUT_A], id="league-not-a-dict"),
+    ],
+)
+def test_get_roster_positions_bad_shape_raises_502(league, caplog):
+    with (
+        make_client(200, league) as client,
+        pytest.raises(HTTPException) as exc_info,
+    ):
+        get_roster_positions(client, LEAGUE_A)
+
+    assert_502(exc_info)
+    assert errors_in(caplog)
+
+
+# --- get_actual_points ---------------------------------------------------------
+
+
+def test_get_actual_points_finds_the_team_and_returns_floats(sleeper, caplog):
+    with sleeper.client() as client:
+        actual = get_actual_points(client, LEAGUE_A, 5, 1)
+
+    assert sleeper.requests == [f"{BASE_URL}/league/{LEAGUE_A}/matchups/5"]
+    assert actual == {
+        "1001": 9.5,
+        "1002": 0.0,
+        "1003": 0.0,
+        "1004": 0.0,
+        "1005": 4.0,
+        "1006": 11.2,
+        "1007": 0.0,
+        "1008": 0.0,
+        "1009": 0.0,
+    }
+    assert all(type(points) is float for points in actual.values())  # 1007's 0
+    assert not warnings_in(caplog)
+
+
+def test_get_actual_points_skips_items_that_are_not_dicts():
+    matchups = [None, "x", 7, {"roster_id": 1, "players_points": {"1001": 2.5}}]
+    with make_client(200, matchups) as client:
+        assert get_actual_points(client, LEAGUE_A, 5, 1) == {"1001": 2.5}
+
+
+@pytest.mark.parametrize(
+    "matchups",
+    [
+        pytest.param([], id="no-entries"),
+        pytest.param(
+            [{"roster_id": 2, "players_points": {"1001": 2.5}}], id="other-teams-only"
+        ),
+        pytest.param(
+            [{"roster_id": "1", "players_points": {"1001": 2.5}}], id="id-as-string"
+        ),
+    ],
+)
+def test_get_actual_points_without_the_teams_entry_returns_empty_and_warns(
+    matchups, caplog
+):
+    with make_client(200, matchups) as client:
+        assert get_actual_points(client, LEAGUE_A, 5, 1) == {}
+
+    assert len(warnings_in(caplog)) == 1
+
+
+@pytest.mark.parametrize("value", [None, [], "x", 7])
+def test_get_actual_points_players_points_not_a_dict_raises_502(value, caplog):
+    matchups = [{"roster_id": 1, "players_points": value}]
+    with (
+        make_client(200, matchups) as client,
+        pytest.raises(HTTPException) as exc_info,
+    ):
+        get_actual_points(client, LEAGUE_A, 5, 1)
+
+    assert_502(exc_info)
+    assert errors_in(caplog)
+
+
+def test_get_actual_points_non_list_raises_502():
+    with (
+        make_client(200, {"roster_id": 1, "players_points": {}}) as client,
+        pytest.raises(HTTPException) as exc_info,
+    ):
+        get_actual_points(client, LEAGUE_A, 5, 1)
+
+    assert_502(exc_info)
+
+
+@pytest.mark.parametrize("value", ["7.2", True, None, [1]])
+def test_get_actual_points_unusable_value_becomes_none_and_warns(value, caplog):
+    # True is an int to isinstance, so it needs its own rejection.
+    matchups = [{"roster_id": 1, "players_points": {"1001": value, "1002": 3}}]
+    with make_client(200, matchups) as client:
+        actual = get_actual_points(client, LEAGUE_A, 5, 1)
+
+    assert actual == {"1001": None, "1002": 3.0}
+    warnings = warnings_in(caplog)
+    assert len(warnings) == 1
+    assert "1001" in warnings[0].getMessage()
+
+
 # --- GET /api/health -----------------------------------------------------------
 
 
@@ -891,6 +1066,7 @@ def test_get_roster_player_fields(api):
         "opponent": "DAL",
         "game_status": "pre_game",
         "locked": False,
+        "actual_points": 0.0,
     }
     assert players["1003"] == {
         "player_id": "1003",
@@ -905,7 +1081,51 @@ def test_get_roster_player_fields(api):
         "opponent": None,
         "game_status": None,
         "locked": False,
+        "actual_points": 0.0,
     }
+
+
+def test_get_roster_actual_points(api):
+    players = api.get(ROSTER_URL).json()["players"]
+
+    actual = {p["player_id"]: p["actual_points"] for p in players}
+    assert actual["1001"] == 9.5  # locked starter, points so far
+    assert actual["1005"] == 4.0  # locked bench player
+    assert actual["1007"] == 0.0  # Sleeper's whole-number 0
+    assert all(type(points) is float for points in actual.values())
+
+
+def test_get_roster_lineup(api):
+    response = api.get(ROSTER_URL)
+
+    body = response.json()
+    assert body["slots"] == SLOTS_A  # starting slots only, no BN
+    lineup = body["lineup"]
+    # QB: 1001 is locked, so he keeps slot 0 and counts his 9.5 actual points.
+    # RB: 1002 (bye, 0 points) is the only RB; the second RB slot stays empty.
+    # WR: 1004, then 1009 (canceled, 0 points) as the only WR left.
+    # WRRB_FLEX: nobody eligible is left (1005 is a locked TE, 1008 a K).
+    assert lineup["starter_ids"] == ["1001", "1002", None, "1004", "1009", None]
+    # Roster order, without 1006 (IR). 1003 has no DynamoDB row, so no
+    # position, so the optimiser can't start him.
+    assert lineup["bench_ids"] == ["1003", "1005", "1007", "1008"]
+    assert lineup["optimal_total"] == pytest.approx(21.5)  # 9.5 + 0 + 12 + 0
+    # The current lineup counts 1003's 5.5, which is why it's higher here.
+    assert lineup["current_total"] == pytest.approx(27.0)  # 9.5 + 0 + 5.5 + 12 + 0
+    assert_no_ids(response)
+
+
+def test_get_roster_calls_sleeper_in_order(api, sleeper):
+    api.get(ROSTER_URL)
+
+    assert sleeper.requests[:5] == [
+        f"{BASE_URL}/league/{LEAGUE_A}/rosters",
+        f"{BASE_URL}/league/{LEAGUE_A}",
+        f"{BASE_URL}/state/nfl",
+        "https://api.sleeper.com/schedule/nfl/regular/2026",
+        f"{BASE_URL}/league/{LEAGUE_A}/matchups/5",  # display_week, not week
+    ]
+    assert all("/projections/" in url for url in sleeper.requests[5:])
 
 
 def test_get_roster_warns_about_players_missing_from_dynamodb(api, caplog):
@@ -915,19 +1135,112 @@ def test_get_roster_warns_about_players_missing_from_dynamodb(api, caplog):
 
 
 def test_get_roster_uses_the_selected_league(api):
-    response = api.get("/api/leagues/1/teams/1/roster")
+    body = api.get("/api/leagues/1/teams/1/roster").json()
 
-    assert [p["player_id"] for p in response.json()["players"]] == ["2001"]
+    assert [p["player_id"] for p in body["players"]] == ["2001"]
+    assert body["slots"] == ["TE"]
+    assert body["lineup"]["starter_ids"] == ["2001"]
 
 
 def test_get_roster_empty_roster(api, sleeper, dynamodb):
-    # Roster 3 has players, starters and reserve all null.
+    # Roster 3 has players, starters and reserve all null, and no matchup entry.
     response = api.get("/api/leagues/0/teams/3/roster")
 
     assert response.status_code == 200
-    assert response.json()["players"] == []
+    body = response.json()
+    assert body["players"] == []
+    assert body["lineup"] == {
+        "starter_ids": [None] * 6,
+        "bench_ids": [],
+        "optimal_total": 0.0,
+        "current_total": 0.0,
+    }
     assert dynamodb.calls == []
     assert not any("/projections/" in url for url in sleeper.requests)
+
+
+def test_get_roster_empty_starters_list_is_not_a_layout_mismatch(api, sleeper):
+    sleeper.rosters[LEAGUE_A][1].update(players=[], starters=[], reserve=[])
+
+    response = api.get("/api/leagues/0/teams/2/roster")
+
+    assert response.status_code == 200
+    assert response.json()["lineup"]["starter_ids"] == [None] * 6
+
+
+def test_get_roster_starters_not_matching_the_layout_is_502(
+    api, sleeper, dynamodb, caplog
+):
+    # Nine starting slots, but roster 1 has six starters.
+    real_layout = ["QB", "RB", "RB", "WR", "WR", "TE", "WRRB_FLEX", "K", "DEF"]
+    sleeper.leagues[LEAGUE_A]["roster_positions"] = real_layout + ["BN"] * 6
+
+    response = api.get(ROSTER_URL)
+
+    assert response.status_code == 502
+    assert response.json() == {"detail": "Sleeper request failed"}
+    assert errors_in(caplog)
+    assert dynamodb.calls == []
+
+
+def test_get_roster_bad_layout_is_502_before_the_week_is_fetched(
+    api, sleeper, dynamodb
+):
+    sleeper.leagues[LEAGUE_A]["roster_positions"] = None
+
+    response = api.get(ROSTER_URL)
+
+    assert response.status_code == 502
+    assert response.json() == {"detail": "Sleeper request failed"}
+    assert not any(url.endswith("/state/nfl") for url in sleeper.requests)
+    assert dynamodb.calls == []
+
+
+def test_get_roster_known_slot_types_do_not_warn(api, caplog):
+    api.get(ROSTER_URL)
+
+    # The only expected warning is the one about 1003's missing row.
+    assert [
+        r.getMessage() for r in warnings_in(caplog) if "1003" not in r.getMessage()
+    ] == []
+
+
+def test_get_roster_unknown_slot_type_warns_and_stays_empty(api, sleeper, caplog):
+    layout = [s if s != "WRRB_FLEX" else "IDP_FLEX" for s in LAYOUT_A]
+    sleeper.leagues[LEAGUE_A]["roster_positions"] = layout
+
+    response = api.get(ROSTER_URL)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["slots"][5] == "IDP_FLEX"
+    assert body["lineup"]["starter_ids"][5] is None
+    assert any("IDP_FLEX" in r.getMessage() for r in warnings_in(caplog))
+
+
+def test_get_roster_without_a_matchup_entry_still_answers(api, sleeper, caplog):
+    sleeper.matchups[LEAGUE_A] = []
+
+    response = api.get(ROSTER_URL)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert all(p["actual_points"] is None for p in body["players"])
+    # The locked QB's points are unknown, so he counts 0.
+    assert body["lineup"]["optimal_total"] == pytest.approx(12.0)
+    assert body["lineup"]["current_total"] == pytest.approx(17.5)
+    # A warning about the matchup, besides the usual one about 1003's row.
+    assert any("1003" not in r.getMessage() for r in warnings_in(caplog))
+
+
+def test_get_roster_failing_matchups_is_502_before_dynamodb(api, sleeper, dynamodb):
+    sleeper.failing = {"/matchups/"}
+
+    response = api.get(ROSTER_URL)
+
+    assert response.status_code == 502
+    assert response.json() == {"detail": "Sleeper request failed"}
+    assert dynamodb.calls == []
 
 
 def test_get_roster_unknown_team_is_404_before_any_other_call(api, sleeper, dynamodb):
