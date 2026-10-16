@@ -27,3 +27,6 @@ htmlcov
 .vscode
 .idea
 Thumbs.db
+
+# Fontend/Node
+frontend/
