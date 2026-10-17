@@ -1,24 +1,35 @@
-/* Colours for light and dark mode. light-dark() picks the first value in
-   light mode and the second in dark, following the visitor's system setting. */
+/* Matchday slate. light-dark() picks the first value in light mode and the
+   second in dark, following the visitor's system setting. */
 :root {
   color-scheme: light dark;
 
-  --bg: light-dark(#f5f6f8, #121417);
-  --surface: light-dark(#ffffff, #1b1e23);
-  --text: light-dark(#1b1e23, #e6e8eb);
-  --muted: light-dark(#5c636d, #9ba2ac);
-  --border: light-dark(#dde1e6, #30353d);
-  --accent: light-dark(#1d7346, #4cc38a);
+  --bg: light-dark(#f2f3f9, #181b2e);
+  --surface: light-dark(#ffffff, #22263d);
+  --surface-hover: light-dark(#f6f7fc, #2a2f4a);
+  --border: light-dark(#dcdeec, #33385a);
+  --text: light-dark(#1a1d33, #eceef8);
+  --muted: light-dark(#5d6182, #9599b8);
+  --accent: light-dark(#0e8a66, #3bd1a5);
 
-  --start-bg: light-dark(#e2f3e9, #173826);
-  --start-text: light-dark(#1d6b41, #82e0ae);
-  --sit-bg: light-dark(#fcebea, #3d1e1c);
-  --sit-text: light-dark(#a12f28, #f3a29c);
-  --pickup-bg: light-dark(#fff3d6, #392e12);
-  --pickup-text: light-dark(#875800, #f2c868);
-  --locked-bg: light-dark(#eceef1, #2a2e35);
+  --start-bg: light-dark(#dcf4ec, #1d3b3a);
+  --start-text: light-dark(#0b6e52, #3bd1a5);
+  --sit-bg: light-dark(#fbe3e9, #3d2236);
+  --sit-text: light-dark(#b02d4d, #f0809a);
+  --pickup-bg: light-dark(#fdf1d3, #3a3220);
+  --pickup-text: light-dark(#7a5800, #f2c14e);
+  --locked-bg: light-dark(#eceef6, #2e3352);
 
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  /* Position colours: the same in both modes, always with dark text */
+  --chip-text: #10131f;
+  --pos-qb: #f0607f;
+  --pos-rb: #2cc2a6;
+  --pos-wr: #4aa8f0;
+  --pos-te: #f29a4a;
+  --pos-k: #a57ef0;
+  --pos-def: #c08a68;
+  --pos-other: #b4b8d0;
+
+  font-family: 'Archivo Variable', system-ui, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
   color: var(--text);
   background: var(--bg);
@@ -31,37 +42,44 @@ body {
 main {
   max-width: 48rem;
   margin: 0 auto;
-  padding: 1.5rem 1rem 3rem;
+  padding: 1.25rem 1rem 3rem;
 }
 
+/* Condensed and heavy: the scoreboard type for names and scores */
+h1,
+h2,
+.display {
+  font-stretch: 75%;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+/* The app's name: a small wordmark rather than a page heading */
 h1 {
   margin: 0 0 1.5rem;
-  font-size: 1.75rem;
-  line-height: 1.2;
+  font-size: 1.125rem;
+  color: var(--muted);
 }
 
 h2 {
-  margin: 2rem 0 1rem;
-  font-size: 1.375rem;
+  margin: 1.5rem 0 1rem;
+  font-size: 2rem;
 }
 
 h3 {
-  margin: 1.75rem 0 0.5rem;
-  font-size: 1.0625rem;
+  margin: 2rem 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 /* Form controls don't inherit the page's font unless told to */
-button,
-select {
+button {
   font: inherit;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  padding: 0.365rem 0.325rem;
-}
-
-button {
+  border-radius: 0.5rem;
+  padding: 0.375rem 0.75rem;
   cursor: pointer;
 }
 
@@ -70,13 +88,12 @@ button:hover {
 }
 
 /* A clear outline for keyboard users, without one on every mouse click */
-button:focus-visible,
-select:focus-visible {
+button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-/* "← Leagues" and "← Teams": a button that looks like a link */
+/* "Back to teams": a button that looks like a link */
 .back {
   padding: 0;
   border: none;
@@ -89,23 +106,19 @@ select:focus-visible {
   text-decoration: underline;
 }
 
-/* The league name, above the page heading */
+/* The league name, just above the team name */
 .eyebrow {
-  margin: 1rem 0 0;
+  margin: 1.25rem 0 0;
   color: var(--muted);
   font-size: 0.875rem;
   font-weight: 600;
 }
 
-.team-name {
-  margin-top: 0.25rem;
-}
-
-.note {
-  color: var(--muted);
-  font-size: 0.875rem;
+.eyebrow + h2 {
+  margin-top: 0.125rem;
+  font-size: 2.5rem;
 }
 
 .error {
-  color: var(--sit-text);
+  color: var(--sit-text)
 }

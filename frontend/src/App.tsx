@@ -46,6 +46,7 @@ function App() {
             <ChoiceList
               title="Choose Your League"
               choices={leagues.data.map((item) => ({ value: item.key, label: item.name }))}
+              layout="tiles"
               onChoose={(key) => choose({ league: key, team: null })}
           />
           )}
@@ -59,7 +60,7 @@ function App() {
             className="back"
             onClick={() => choose({ league: null, team: null})}
           >
-            ← Leagues
+            Back to leagues
           </button>
           <p className="eyebrow">{league.name}</p>
           <RequestStatus state={teams} loading="Loading teams…" onRetry={retryTeams} />
@@ -67,6 +68,7 @@ function App() {
             <ChoiceList
               title="Choose Your Team"
               choices={teams.data.map((item) => ({ value: item.roster_id, label: item.team_name }))}
+              layout="list"
               onChoose={(rosterId) => choose({ league: league.key, team: rosterId})}
             />
           )}
@@ -80,10 +82,10 @@ function App() {
             className="back"
             onClick={() => choose({ league: league.key, team: null})}
           >
-            ← Teams
+            Back to teams
           </button>
           <p className="eyebrow">{league.name}</p>
-          <h2 className="team-name">{team.team_name}</h2>
+          <h2>{team.team_name}</h2>
           <RequestStatus state={roster} loading="Loading lineup…" onRetry={retryRoster} />
           {roster.status ==='success' && <LineupView roster={roster.data} />}
         </>

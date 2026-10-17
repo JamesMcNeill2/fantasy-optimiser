@@ -37,11 +37,6 @@ export function playerName(player: RosterPlayer): string {
   return name === '' ? 'Unknown Player' : name
 }
 
-// The line under a player's name: position and NFL team, e.g. "WR · KC".
-export function playerDetails(player: RosterPlayer): string {
-  return [player.position, player.team].filter((part) => part !== null).join(' · ')
-}
-
 // The game column. "BYE" comes from game_status, never from a missing
 // projection, which also means Out or on IR.
 export function gameLabel(player: RosterPlayer): string {
@@ -106,4 +101,18 @@ const SLOT_LABELS = new Map([
 
 export function slotLabel(slot: string): string {
   return SLOT_LABELS.get(slot) ?? slot
+}
+
+// The summary's headline: how many swaps the lineup needs.
+export function changeVerdict(changes: LineupChanges): string {
+  const count = Math.max(changes.start.length, changes.bench.length)
+  if (count === 0) return 'Your Lineup Is Optimal'
+  return count === 1 ? '1 change' : `${count} changes`
+}
+
+const POSITIONS = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF'])
+
+// The CSS class that colours a position chip; anything unusual gets a neutral one.
+export function positionClass(position: string): string {
+  return POSITIONS.has(position) ? `pos-${position.toLowerCase}` : 'pos-other'
 }

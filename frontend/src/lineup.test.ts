@@ -10,7 +10,8 @@ import {
   slotLabel,
   gainLabel,
   isGain,
-  playerDetails,
+  changeVerdict,
+  positionClass,
 } from './lineup'
 
 // A typical unlocked player. Each test overrides only the fields it cares about.
@@ -170,16 +171,6 @@ describe('slotLabel', () => {
   })
 })
 
-describe('playerDetails', () => {
-  it('shows the position and NFL team', () => {
-    expect(playerDetails(player({ position: 'WR', team: 'KC' }))).toBe('WR · KC')
-  })
-
-  it('leaves out a missing team', () => {
-    expect(playerDetails(player({ position: 'RB', team: null }))).toBe('RB')
-  })
-})
-
 describe('gainLabel', () => {
   it('shows a gain with a plus sign', () => {
     expect(gainLabel(3.456)).toBe('+3.46')
@@ -203,5 +194,34 @@ describe('isGain', () => {
   it('is false for no gain, even with rounding noise', () => {
     expect(isGain(0)).toBe(false)
     expect(isGain(1e-14)).toBe(false)
+  })
+})
+
+describe('changeVerdict', () => {
+  it('says when there is nothing to change', () => {
+    expect(changeVerdict({ start: [], bench: [] })).toBe('Your lineup is optimal')
+  })
+
+  it('counts one swap as one change', () => {
+    expect(changeVerdict({ start: ['4'], bench: ['3'] })).toBe('1 change')
+  })
+
+  it('counts a benching into an empty slot as a change', () => {
+    expect(changeVerdict({ start: [], bench: ['2'] })).toBe('1 change')
+  })
+
+  it('counts several swaps', () => {
+    expect(changeVerdict({ start: ['4', '5'], bench: ['2', '3'] })).toBe('2 changes')
+  })
+})
+
+describe('positionClass', () => {
+  it('colours the usual positions', () => {
+    expect(positionClass('WR')).toBe('pos-wr')
+    expect(positionClass('DEF')).toBe('pos-def')
+  })
+
+  it('gives anything else a neutral colour', () => {
+    expect(positionClass('LB')).toBe('pos-other')
   })
 })
