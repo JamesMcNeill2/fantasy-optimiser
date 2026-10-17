@@ -1,0 +1,168 @@
+import { describe, expect, it } from 'vitest'
+import type { OptimalLineup, RosterPlayer } from './api'
+import {
+  gameLabel,
+  lineupChanges,
+  playerName,
+  pointsLabel,
+  selectionValue,
+  slotsNeedingPickup,
+  slotLabel,
+} from './lineup'
+
+// A typical unlocked player. Each test overrides only the fields it cares about.
+function player(overrides: Partial<RosterPlayer> = {}): RosterPlayer {
+  return {
+    player_id: '1',
+    starter_slot: null,
+    reserve: false,
+    first_name: 'Test',
+    last_name: 'Player',
+    position: 'WR',
+    team: 'KC',
+    injury_status: null,
+    projected_points: 10,
+    opponent: 'LV',
+    game_status: 'pre_game',
+    locked: false,
+    actual_points: null,
+    ...overrides,
+  }
+}
+
+function lineup(starter_ids: (string | null)[]): OptimalLineup {
+  return { starter_ids, bench_ids: [], optimal_total: 0, current_total: 0 }
+}
+
+describe('selectionValue', () => {
+  it('uses the projection', () => {
+    expect(selectionValue(player({ projected_points: 12.5 }))).toBe(12.5)
+  })
+
+  it('counts a missing projection as 0', () => {
+    expect(selectionValue(player({ projected_points: null }))).toBe(0)
+  })
+
+  it('counts a bye or cancelled game as 0, even with a projection', () => {
+    expect(selectionValue(player({ game_status: 'bye' }))).toBe(0)
+    expect(selectionValue(player({ game_status: 'canceled' }))).toBe(0)
+  })
+})
+
+describe('playerName', () => {
+  it('joins first and last names', () => {
+    expect(playerName(player({ first_name: 'Kansas City', last_name: 'Chiefs' }))).toBe(
+      'Kansas City Chiefs',
+    )
+  })
+
+  it('falls back when there are no names', () => {
+    expect(playerName(player({ first_name: null, last_name: null }))).toBe('Unknown Player')
+  })
+})
+
+describe('gameLabel', () => {
+  it('shows the opponent', () => {
+    expect(gameLabel(player({ opponent: 'LV' }))).toBe('v LV')
+  })
+
+  it('labels a bye from game_status', () => {
+    expect(gameLabel(player({ game_status: 'bye', opponent: null }))).toBe('BYE')
+  })
+
+  it('does not call a missing projection a bye', () => {
+    expect(gameLabel(player({ projected_points: null, injury_status: 'Out' }))).toBe('v LV')
+  })
+
+  it('labels a cancelled game', () => {
+    expect(gameLabel(player({ game_status: 'canceled' }))).toBe('Cancelled')
+  })
+
+  it('shows a dash when the game is unknown', () => {
+    expect(gameLabel(player({ game_status: null, opponent: null }))).toBe('-')
+  })
+})
+
+describe('pointsLabel', () => {
+  it('shows the projection to one decimal place', () => {
+    expect(pointsLabel(player({ projected_points: 12.46 }))).toBe('12.5')
+  })
+
+  it('shows the injury status when there is no projection', () => {
+    expect(pointsLabel(player({ projected_points: null, injury_status: 'Out' }))).toBe('Out')
+  })
+
+  it('shows a dash when there is no projection or injury', () => {
+    expect(pointsLabel(player({ projected_points: null }))).toBe('-')
+  })
+
+  it('shows a dash on a bye, even with a stale projection', () => {
+    expect(pointsLabel(player({ game_status: 'bye', projected_points: 8 }))).toBe('-')
+  })
+
+  it('shows points so far for a locked player', () => {
+    expect(
+      pointsLabel(player({ locked: true, game_status: 'in_game', actual_points: 7.2 })),
+    ).toBe('7.2')
+  })
+
+  it('counts a locked player with no points yet as 0', () => {
+    expect(pointsLabel(player({ locked: true, game_status: 'in_game' }))).toBe('0.0')
+  })
+})
+
+describe('lineupChanges', () => {
+  it('ignores a starter moved between equivalent slots', () => {
+    // Player 2 is in the WR slot and 3 in the flex; the optimiser swaps them
+    const players = [
+      player({ player_id: '2', starter_slot: 0 }),
+      player({ player_id: '3', starter_slot: 1 }),
+    ]
+    expect(lineupChanges(players, lineup(['3', '2']))).toEqual({ start: [], bench: [] })
+  })
+
+  it('lists who comes in and who goes out', () => {
+    const players = [
+      player({ player_id: '2', starter_slot: 0 }),
+      player({ player_id: '3', starter_slot: 1 }),
+      player({ player_id: '4' }),
+    ]
+    expect(lineupChanges(players, lineup(['2', '4']))).toEqual({ start: ['4'], bench: ['3'] })
+  })
+
+  it('benches a starter whose slot the optimiser leaves empty', () => {
+    const players = [player({ player_id: '2', starter_slot: 0 })]
+    expect(lineupChanges(players, lineup([null]))).toEqual({ start: [], bench: ['2'] })
+  })
+})
+
+describe('slotsNeedingPickup', () => {
+  it('flags an empty slot', () => {
+    expect(slotsNeedingPickup([], lineup([null]))).toEqual(new Set([0]))
+  })
+
+  it('flags a slot whose best option is on a bye', () => {
+    const players = [player({ player_id: '2', game_status: 'bye', opponent: null })]
+    expect(slotsNeedingPickup(players, lineup(['2']))).toEqual(new Set([0]))
+  })
+
+  it('does not flag a locked starter with no points yet', () => {
+    const players = [player({ player_id: '2', locked: true, game_status: 'in_game' })]
+    expect(slotsNeedingPickup(players, lineup(['2']))).toEqual(new Set())
+  })
+
+  it('does not flag a slot with a projected starter', () => {
+    const players = [player({ player_id: '2' })]
+    expect(slotsNeedingPickup(players, lineup(['2']))).toEqual(new Set())
+  })
+})
+
+describe('slotLabel', () => {
+  it('shortens the flex slots', () => {
+    expect(slotLabel('WRRB_FLEX')).toBe('W/R')
+  })
+
+  it('leaves other slots unchanged', () => {
+    expect(slotLabel('QB')).toBe('QB')
+  })
+})
