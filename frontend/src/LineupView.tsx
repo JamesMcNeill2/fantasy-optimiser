@@ -33,7 +33,7 @@ export function LineupView({ roster }: LineupViewProps) {
 
   return (
     <section>
-      <p className="Note">
+      <p className="note">
         Week {roster.week}, {roster.season}
       </p>
 
@@ -51,7 +51,7 @@ export function LineupView({ roster }: LineupViewProps) {
           <dd>{gainLabel(gain)}</dd>
         </div>
       </dl>
-      <p className="Note">
+      <p className="note">
         {anyLocked
         ? 'Live totals: locked players count their points so far, everyone else their projection.'
           : 'Projected totals.'}
@@ -134,9 +134,8 @@ function PlayerTable({ children }: { children: ReactNode}) {
           <tr>
             <th scope="col">Slot</th>
             <th scope="col">Player</th>
-            <th scope="col">Pos</th>
             <th scope="col">Game</th>
-            <th scope="col" className="Points">
+            <th scope="col" className="points">
               Points
             </th>
           </tr>
@@ -160,7 +159,7 @@ function PlayerRow({slot, player, change, needsPickup = false }: PlayerRowProps)
     return (
       <tr className="needs-pickup">
         <th scope="row">{slot}</th>
-        <td colSpan={4}>
+        <td colSpan={3}>
           Empty <span className="tag tag-pickup">Needs Pickup</span>
         </td>
       </tr>
@@ -176,8 +175,8 @@ function PlayerRow({slot, player, change, needsPickup = false }: PlayerRowProps)
         {change === 'sit' && <span className="tag tag-sit">Bench</span>}
         {player.locked && <span className="tag tag-locked">Locked</span>}
         {needsPickup && <span className="tag tag-pickup">Needs Pickup</span>}
+        <div className="player-details">{playerDetails(player)}</div>
       </td>
-      <td>{player.position ?? '-'}</td>
       <td>{gameLabel(player)}</td>
       <td className="points">{pointsLabel(player)}</td>
     </tr>

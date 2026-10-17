@@ -58,7 +58,7 @@ select {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 0.375rem;
-  padding: 0.365rem 0.625rem;
+  padding: 0.365rem 0.325rem;
 }
 
 button {
@@ -76,12 +76,29 @@ select:focus-visible {
   outline-offset: 2px;
 }
 
-/* The league and team pickers, side by side when there's room */
-.pickers {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: end;
+/* "← Leagues" and "← Teams": a button that looks like a link */
+.back {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.back:hover {
+  text-decoration: underline;
+}
+
+/* The league name, above the page heading */
+.eyebrow {
+  margin: 1rem 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.team-name {
+  margin-top: 0.25rem;
 }
 
 .note {

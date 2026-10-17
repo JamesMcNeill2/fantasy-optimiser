@@ -61,15 +61,20 @@
   border-bottom: 1px solid var(--border);
 }
 
+.players thead th {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
 .players tbody tr:last-child th,
 .players tbody tr:last-child td {
   border-bottom: none;
 }
 
-.players thread th {
+.player-details {
   color: var(--muted);
   font-size: 0.8125rem;
-  font-weight: 600;
 }
 
 /* The slot label at the start of each row */
@@ -107,7 +112,7 @@
 
 .tag-start {
   background: var(--start-bg);
-  color: var(--select-text);
+  color: var(--start-text);
 }
 
 .tag-sit {
