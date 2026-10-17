@@ -8,6 +8,9 @@ import {
   selectionValue,
   slotsNeedingPickup,
   slotLabel,
+  gainLabel,
+  isGain,
+  playerDetails,
 } from './lineup'
 
 // A typical unlocked player. Each test overrides only the fields it cares about.
@@ -84,9 +87,9 @@ describe('gameLabel', () => {
 })
 
 describe('pointsLabel', () => {
-  it('shows the projection to one decimal place', () => {
-    expect(pointsLabel(player({ projected_points: 12.46 }))).toBe('12.5')
-  })
+     it('shows the projection to two decimal places', () => {
+       expect(pointsLabel(player({ projected_points: 12.456 }))).toBe('12.46')
+     })
 
   it('shows the injury status when there is no projection', () => {
     expect(pointsLabel(player({ projected_points: null, injury_status: 'Out' }))).toBe('Out')
@@ -102,12 +105,12 @@ describe('pointsLabel', () => {
 
   it('shows points so far for a locked player', () => {
     expect(
-      pointsLabel(player({ locked: true, game_status: 'in_game', actual_points: 7.2 })),
-    ).toBe('7.2')
+      pointsLabel(player({ locked: true, game_status: 'in_game', actual_points: 7.20 })),
+    ).toBe('7.20')
   })
 
   it('counts a locked player with no points yet as 0', () => {
-    expect(pointsLabel(player({ locked: true, game_status: 'in_game' }))).toBe('0.0')
+    expect(pointsLabel(player({ locked: true, game_status: 'in_game' }))).toBe('0.00')
   })
 })
 
@@ -164,5 +167,41 @@ describe('slotLabel', () => {
 
   it('leaves other slots unchanged', () => {
     expect(slotLabel('QB')).toBe('QB')
+  })
+})
+
+describe('playerDetails', () => {
+  it('shows the position and NFL team', () => {
+    expect(playerDetails(player({ position: 'WR', team: 'KC' }))).toBe('WR · KC')
+  })
+
+  it('leaves out a missing team', () => {
+    expect(playerDetails(player({ position: 'RB', team: null }))).toBe('RB')
+  })
+})
+
+describe('gainLabel', () => {
+  it('shows a gain with a plus sign', () => {
+    expect(gainLabel(3.456)).toBe('+3.46')
+  })
+
+  it('shows no sign when there is no gain', () => {
+    expect(gainLabel(0)).toBe('0.00')
+  })
+
+  it('treats a gain that rounds to zero as none', () => {
+    expect(gainLabel(0.004)).toBe('0.00')
+    expect(gainLabel(-0.001)).toBe('0.00')
+  })
+})
+
+describe('isGain', () => {
+  it('is true for a gain', () => {
+    expect(isGain(0.01)).toBe(true)
+  })
+
+  it('is false for no gain, even with rounding noise', () => {
+    expect(isGain(0)).toBe(false)
+    expect(isGain(1e-14)).toBe(false)
   })
 })

@@ -8,6 +8,9 @@ import {
     pointsLabel,
     slotLabel,
     slotsNeedingPickup,
+    gainLabel,
+    isGain,
+    playerDetails,
 } from './lineup'
 import './LineupView.css'
 
@@ -30,9 +33,9 @@ export function LineupView({ roster }: LineupViewProps) {
 
   return (
     <section>
-      <h2>
+      <p className="Note">
         Week {roster.week}, {roster.season}
-      </h2>
+      </p>
 
       <dl className="totals">
         <div>
@@ -43,12 +46,9 @@ export function LineupView({ roster }: LineupViewProps) {
           <dt>Optimal</dt>
           <dd>{formatPoints(lineup.optimal_total)}</dd>
         </div>
-        <div className="gain">
+        <div className={isGain(gain) ?  'gain' : undefined}>
           <dt>Gain</dt>
-          <dd>
-            {gain > 0 ? '+' : ''}
-            {formatPoints(gain)}
-          </dd>
+          <dd>{gainLabel(gain)}</dd>
         </div>
       </dl>
       <p className="Note">

@@ -15,12 +15,31 @@ export function selectionValue(player: RosterPlayer): number {
 }
 
 export function formatPoints(points: number): string {
-  return points.toFixed(1)
+  return points.toFixed(2)
 }
+
+// The gain as shown: a + for a real gain, eg +1.23,
+// and no sign when it rounds to zero, eg. 0.00.
+export function gainLabel(gain: number): string {
+  const rounded = Math.round(gain * 100) / 100
+  if (rounded === 0) return formatPoints(0)
+  return rounded > 0 ? `+${formatPoints(rounded)}` : formatPoints(rounded)
+}
+
+// Whether the gain is worth highlighting: more than zero once rounded.
+export function isGain(gain: number): boolean {
+  return Math.round(gain * 100) > 0
+}
+
 
 export function playerName(player: RosterPlayer): string {
   const name = [player.first_name, player.last_name].filter((part) => part !== null).join(' ')
   return name === '' ? 'Unknown Player' : name
+}
+
+// The line under a player's name: position and NFL team, e.g. "WR · KC".
+export function playerDetails(player: RosterPlayer): string {
+  return [player.position, player.team].filter((part) => part !== null).join(' · ')
 }
 
 // The game column. "BYE" comes from game_status, never from a missing
