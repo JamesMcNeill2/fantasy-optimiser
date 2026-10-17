@@ -1,7 +1,27 @@
+/* Colours for light and dark mode. light-dark() picks the first value in
+   light mode and the second in dark, following the visitor's system setting. */
 :root {
   color-scheme: light dark;
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  --bg: light-dark(#f5f6f8, #121417);
+  --surface: light-dark(#ffffff, #1b1e23);
+  --text: light-dark(#1b1e23, #e6e8eb);
+  --muted: light-dark(#5c636d, #9ba2ac);
+  --border: light-dark(#dde1e6, #30353d);
+  --accent: light-dark(#1d7346, #4cc38a);
+
+  --start-bg: light-dark(#e2f3e9, #173826);
+  --start-text: light-dark(#1d6b41, #82e0ae);
+  --sit-bg: light-dark(#fcebea, #3d1e1c);
+  --sit-text: light-dark(#a12f28, #f3a29c);
+  --pickup-bg: light-dark(#fff3d6, #392e12);
+  --pickup-text: light-dark(#875800, #f2c868);
+  --locked-bg: light-dark(#eceef1, #2a2e35);
+
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
 }
 
 body {
@@ -9,7 +29,66 @@ body {
 }
 
 main {
-  max-width: 60rem;
+  max-width: 48rem;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 1.5rem 1rem 3rem;
+}
+
+h1 {
+  margin: 0 0 1.5rem;
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+
+h2 {
+  margin: 2rem 0 1rem;
+  font-size: 1.375rem;
+}
+
+h3 {
+  margin: 1.75rem 0 0.5rem;
+  font-size: 1.0625rem;
+}
+
+/* Form controls don't inherit the page's font unless told to */
+button,
+select {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  padding: 0.365rem 0.625rem;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--accent);
+}
+
+/* A clear outline for keyboard users, without one on every mouse click */
+button:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The league and team pickers, side by side when there's room */
+.pickers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: end;
+}
+
+.note {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.error {
+  color: var(--sit-text);
 }
