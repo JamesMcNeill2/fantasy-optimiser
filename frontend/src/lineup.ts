@@ -106,7 +106,7 @@ export function slotLabel(slot: string): string {
 // The summary's headline: how many swaps the lineup needs.
 export function changeVerdict(changes: LineupChanges): string {
   const count = Math.max(changes.start.length, changes.bench.length)
-  if (count === 0) return 'Your Lineup Is Optimal'
+  if (count === 0) return 'Your lineup is optimal'
   return count === 1 ? '1 change' : `${count} changes`
 }
 
@@ -114,5 +114,5 @@ const POSITIONS = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF'])
 
 // The CSS class that colours a position chip; anything unusual gets a neutral one.
 export function positionClass(position: string): string {
-  return POSITIONS.has(position) ? `pos-${position.toLowerCase}` : 'pos-other'
+  return POSITIONS.has(position) ? `pos-${position.toLowerCase()}` : 'pos-other'
 }

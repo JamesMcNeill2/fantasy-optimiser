@@ -20,7 +20,7 @@ export function ChoiceList({ title, choices, onChoose, layout }: ChoiceListProps
   return (
     <section>
       <h2>{title}</h2>
-      <ul className={`choices choices=${layout}`}>
+      <ul className={`choices choices-${layout}`}>
         {choices.map((choice) => (
           <li key={choice.value}>
             <button type="button" className="choice" onClick={() => onChoose(choice.value)}>

@@ -32,12 +32,12 @@ function App() {
       : undefined
 
   const [roster, retryRoster] = useApi<RosterResponse>(
-    league == undefined || team === undefined ? null : rosterPath(league.key, team.roster_id),
+    league === undefined || team === undefined ? null : rosterPath(league.key, team.roster_id),
   )
 
   return (
     <main>
-      <h1>Macs Fantasy Lineup Optimiser</h1>
+      <h1>Mac's Fantasy Lineup Optimiser</h1>
 
       {league === undefined && (
         <>

@@ -138,6 +138,7 @@ function MoveRow({ action, player }: { action: 'start' | 'bench'; player: Roster
 // A coloured position label, e.g. WR in blue. Nothing if the position is unknown.
 function PositionChip({ position }: { position: string | null }) {
   if (position === null) return null
+  return <span className={`chip ${positionClass(position)}`}>{position}</span>
 }
 
 // A table with the column headings every player list shares.
