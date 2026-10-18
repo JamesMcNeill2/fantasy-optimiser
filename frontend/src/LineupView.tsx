@@ -15,6 +15,7 @@ import {
   slotClass,
   opponentOf,
   rowState,
+  benchOrder,
 } from './lineup'
 import './LineupView.css'
 import { teamColours } from './nflTeams'
@@ -36,6 +37,7 @@ export function LineupView({ roster }: LineupViewProps) {
   const gain = lineup.optimal_total - lineup.current_total
   const anyLocked = players.some((player) => player.locked)
   const reserve = players.filter((player) => player.reserve)
+  const bench = benchOrder(players, lineup.bench_ids)
 
   return (
     <>
@@ -107,7 +109,7 @@ export function LineupView({ roster }: LineupViewProps) {
       </PlayerTable>
 
       <PlayerTable title="Bench">
-        {lineup.bench_ids.map((id) => (
+        {bench.map((id) => (
           <PlayerRow
             key={id}
             slot="BN"

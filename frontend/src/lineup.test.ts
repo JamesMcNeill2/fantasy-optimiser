@@ -16,6 +16,7 @@ import {
   weekLabel,
   opponentOf,
   rowState,
+  benchOrder,
 } from './lineup'
 
 // A typical unlocked player. Each test overrides only the fields it cares about.
@@ -207,15 +208,15 @@ describe('changeVerdict', () => {
   })
 
   it('counts one swap as one change', () => {
-    expect(changeVerdict({ start: ['4'], bench: ['3'] })).toBe('1 change')
+    expect(changeVerdict({ start: ['4'], bench: ['3'] })).toBe('1 Change')
   })
 
   it('counts a benching into an empty slot as a change', () => {
-    expect(changeVerdict({ start: [], bench: ['2'] })).toBe('1 change')
+    expect(changeVerdict({ start: [], bench: ['2'] })).toBe('1 Change')
   })
 
   it('counts several swaps', () => {
-    expect(changeVerdict({ start: ['4', '5'], bench: ['2', '3'] })).toBe('2 changes')
+    expect(changeVerdict({ start: ['4', '5'], bench: ['2', '3'] })).toBe('2 Changes')
   })
 })
 
@@ -275,5 +276,55 @@ describe('rowState', () => {
 
   it('leaves everyone else alone', () => {
     expect(rowState(player())).toBeNull()
+  })
+})
+
+describe('benchOrder', () => {
+  it('lists the bench by position, QB to DEF', () => {
+    const players = [
+      player({ player_id: 'def', position: 'DEF' }),
+      player({ player_id: 'wr', position: 'WR' }),
+      player({ player_id: 'qb', position: 'QB' }),
+      player({ player_id: 'k', position: 'K' }),
+      player({ player_id: 'te', position: 'TE' }),
+      player({ player_id: 'rb', position: 'RB' }),
+    ]
+    expect(benchOrder(players, ['def', 'wr', 'qb', 'k', 'te', 'rb'])).toEqual([
+      'qb',
+      'rb',
+      'wr',
+      'te',
+      'k',
+      'def',
+    ])
+  })
+
+  it('puts more points first within a position', () => {
+    const players = [
+      player({ player_id: 'low', projected_points: 4 }),
+      player({ player_id: 'high', projected_points: 12 }),
+    ]
+    expect(benchOrder(players, ['low', 'high'])).toEqual(['high', 'low'])
+  })
+
+  it('counts a locked player by points so far, and a bye as 0', () => {
+    const players = [
+      player({ player_id: 'bye', game_status: 'bye', projected_points: 15 }),
+      player({ player_id: 'locked', locked: true, game_status: 'in_game', actual_points: 9 }),
+      player({ player_id: 'projected', projected_points: 6 }),
+    ]
+    expect(benchOrder(players, ['bye', 'locked', 'projected'])).toEqual([
+      'locked',
+      'projected',
+      'bye',
+    ])
+  })
+
+  it('puts other positions after DEF, and players it cannot find last', () => {
+    const players = [
+      player({ player_id: 'lb', position: 'LB' }),
+      player({ player_id: 'def', position: 'DEF' }),
+    ]
+    expect(benchOrder(players, ['missing', 'lb', 'def'])).toEqual(['def', 'lb', 'missing'])
   })
 })

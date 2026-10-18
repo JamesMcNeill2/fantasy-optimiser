@@ -119,7 +119,9 @@ export function changeVerdict(changes: LineupChanges): string {
   return count === 1 ? '1 Change' : `${count} Changes`
 }
 
-const POSITIONS = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF'])
+// The fantasy positions, in the order the bench lists them
+const POSITION_ORDER = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']
+const POSITIONS = new Set(POSITION_ORDER)
 
 // The CSS class that colours a position chip; anything unusual gets a neutral one.
 export function positionClass(position: string): string {
@@ -152,4 +154,35 @@ export function rowState(player: RosterPlayer): RowState {
   if (player.locked) return 'locked'
   if (player.game_status === 'bye') return 'bye'
   return null
+}
+
+// What a player counts for this week, as the points column shows it: points so
+// far once locked, otherwise the projection (0 for a bye, a cancelled game or
+// no projection).
+export function pointsValue(player: RosterPlayer): number {
+  return player.locked ? (player.actual_points ?? 0) : selectionValue(player)
+}
+
+// Where a position comes in POSITION_ORDER; anything else sorts after DEF.
+function positionRank(position: string | null): number {
+  const index = position === null ? -1 : POSITION_ORDER.indexOf(position)
+  return index === -1 ? POSITION_ORDER.length : index
+}
+
+// The bench in display order: by position (QB, RB, WR, TE, K, DEF, then
+// anything else), then by points, highest first. Ids missing from the player
+// list go last. Ties keep roster order.
+export function benchOrder(players: RosterPlayer[], benchIds: string[]): string[] {
+  const byId = new Map(players.map((player) => [player.player_id, player]))
+  return benchIds.toSorted((a, b) => {
+    const first = byId.get(a)
+    const second = byId.get(b)
+    if (first === undefined || second === undefined) {
+      return Number(first === undefined) - Number(second === undefined)
+    }
+    return (
+      positionRank(first.position) - positionRank(second.position) ||
+      pointsValue(second) - pointsValue(first)
+    )
+  })
 }
