@@ -3,7 +3,7 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .choice {
@@ -27,35 +27,33 @@
   transform: scale(0.98);
 }
 
-/* Leagues: big tiles, the name set large at the bottom left */
-.choices-tiles {
+.choices-large,
+.choices-regular {
   grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
 }
 
-.choices-tiles .choice {
-  min-height: 8rem;
-  align-items: flex-end;
+.choices-regular .choice {
+  padding: 0.625rem 1rem;
+}
+
+.choice-label {
+  font-weight: 600;
+}
+
+/* Leagues: the same boxes as teams, scaled up */
+.choices-large .choice {
+  gap: 1rem;
   padding: 1.25rem;
 }
 
-.choices-tiles .choice-label {
-  font-stretch: 75%;
-  font-weight: 700;
-  font-size: 1.75rem;
-  line-height: 1.05;
+.choices-large .choice-label {
+  font-size: 1.25rem;
 }
 
-/* Teams: compact rows with an initials badge */
-.choices-list {
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-}
-
-.choices-list .choice {
-  padding: 0.75rem 1rem;
-}
-
-.choices-list .choice-label {
-  font-weight: 600;
+.choices-large .badge {
+  width: 3.25rem;
+  height: 3.25rem;
+  font-size: 1.25rem;
 }
 
 .badge {

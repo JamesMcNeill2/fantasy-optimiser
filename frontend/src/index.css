@@ -18,6 +18,8 @@
   --pickup-bg: light-dark(#fdf1d3, #3a3220);
   --pickup-text: light-dark(#7a5800, #f2c14e);
   --locked-bg: light-dark(#eceef6, #2e3352);
+  --locked-row: light-dark(#f4f5fa, #1d2035);
+  --bye-row: light-dark(#f1eefb, #241f3d);
 
   /* Position colours: the same in both modes, always with dark text */
   --chip-text: #10131f;
@@ -42,34 +44,47 @@ body {
 main {
   max-width: 48rem;
   margin: 0 auto;
-  padding: 1.25rem 1rem 3rem;
+  padding: 0.75rem 1rem 2rem;
 }
 
 /* Condensed and heavy: the scoreboard type for names and scores */
 h1,
 h2,
+h3,
 .display {
   font-stretch: 75%;
   font-weight: 700;
   line-height: 1.1;
 }
 
-/* The app's name: a small wordmark rather than a page heading */
+/* The app's name */
 h1 {
-  margin: 0 0 1.5rem;
-  font-size: 1.125rem;
-  color: var(--muted);
+  margin: 0;
+  font-size: 1.75rem;
 }
 
 h2 {
-  margin: 1.5rem 0 1rem;
-  font-size: 2rem;
+  font-size: 2.5rem;
 }
 
+/* Starters, Bench, Injured reserve */
 h3 {
-  margin: 2rem 0 0.5rem;
-  font-size: 1rem;
-  font-weight: 600;
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1.5rem;
+}
+
+/* The app's name, centred in a bar across the top of every page */
+.site-header {
+  margin-bottom: 0.875rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+
+/* The name links to the leagues page, without looking like a link */
+.site-header a {
+  color: inherit;
+  text-decoration: none;
 }
 
 /* Form controls don't inherit the page's font unless told to */
@@ -91,32 +106,6 @@ button:hover {
 button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-}
-
-/* "Back to teams": a button that looks like a link */
-.back {
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--accent);
-  font-weight: 600;
-}
-
-.back:hover {
-  text-decoration: underline;
-}
-
-/* The league name, just above the team name */
-.eyebrow {
-  margin: 1.25rem 0 0;
-  color: var(--muted);
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.eyebrow + h2 {
-  margin-top: 0.125rem;
-  font-size: 2.5rem;
 }
 
 .error {

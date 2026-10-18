@@ -12,6 +12,10 @@ import {
   isGain,
   changeVerdict,
   positionClass,
+  slotClass,
+  weekLabel,
+  opponentOf,
+  rowState,
 } from './lineup'
 
 // A typical unlocked player. Each test overrides only the fields it cares about.
@@ -75,7 +79,7 @@ describe('gameLabel', () => {
   })
 
   it('does not call a missing projection a bye', () => {
-    expect(gameLabel(player({ projected_points: null, injury_status: 'Out' }))).toBe('v LV')
+    expect(gameLabel(player({ projected_points: null }))).toBe('v LV')
   })
 
   it('labels a cancelled game', () => {
@@ -92,11 +96,7 @@ describe('pointsLabel', () => {
        expect(pointsLabel(player({ projected_points: 12.456 }))).toBe('12.46')
      })
 
-  it('shows the injury status when there is no projection', () => {
-    expect(pointsLabel(player({ projected_points: null, injury_status: 'Out' }))).toBe('Out')
-  })
-
-  it('shows a dash when there is no projection or injury', () => {
+  it('shows a dash when there is no projection', () => {
     expect(pointsLabel(player({ projected_points: null }))).toBe('-')
   })
 
@@ -223,5 +223,53 @@ describe('positionClass', () => {
 
   it('gives anything else a neutral colour', () => {
     expect(positionClass('LB')).toBe('pos-other')
+  })
+})
+
+describe('slotClass', () => {
+  it('colours a position slot like the position', () => {
+    expect(slotClass('QB')).toBe('pos-qb')
+  })
+
+  it('gives every flex slot the same colour', () => {
+    expect(slotClass('WRRB_FLEX')).toBe('slot-flex')
+    expect(slotClass('SUPER_FLEX')).toBe('slot-flex')
+  })
+
+  it('has its own classes for the bench and IR', () => {
+    expect(slotClass('BN')).toBe('slot-bn')
+    expect(slotClass('IR')).toBe('slot-ir')
+  })
+})
+
+describe('weekLabel', () => {
+  it('shows the week', () => {
+    const roster = { players: [player()], season: '2026', week: 6, slots: [], lineup: lineup([]) }
+    expect(weekLabel(roster)).toBe('Week 6')
+  })
+})
+
+describe('opponentOf', () => {
+  it('gives the opponent for a game still to play', () => {
+    expect(opponentOf(player({ opponent: 'LV' }))).toBe('LV')
+  })
+
+  it('gives null on a bye or for a cancelled game', () => {
+    expect(opponentOf(player({ game_status: 'bye', opponent: null }))).toBeNull()
+    expect(opponentOf(player({ game_status: 'canceled' }))).toBeNull()
+  })
+})
+
+describe('rowState', () => {
+  it('shades a locked player', () => {
+    expect(rowState(player({ locked: true, game_status: 'in_game' }))).toBe('locked')
+  })
+
+  it('shades a player on a bye', () => {
+    expect(rowState(player({ game_status: 'bye', opponent: null }))).toBe('bye')
+  })
+
+  it('leaves everyone else alone', () => {
+    expect(rowState(player())).toBeNull()
   })
 })

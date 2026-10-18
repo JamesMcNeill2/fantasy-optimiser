@@ -11,6 +11,8 @@ import { LineupView } from './LineupView'
 import { RequestStatus } from './RequestStatus'
 import { useApi } from './useApi'
 import { useSelection } from './urlState'
+import { weekLabel } from './lineup'
+import { PageHeader } from './PageHeader'
 
 
 function App() {
@@ -37,38 +39,46 @@ function App() {
 
   return (
     <main>
-      <h1>Mac's Fantasy Lineup Optimiser</h1>
+      <header className="site-header">
+        <h1>
+          <a
+            href="/"
+            onClick={(event) => {
+              event.preventDefault()
+              choose({ league: null, team: null })
+            }}
+          >
+            Mac's Fantasy Lineup Optimiser
+          </a>
+        </h1>
+      </header>
 
       {league === undefined && (
         <>
+          <PageHeader title="Choose Your League" />
           <RequestStatus state={leagues} loading="Loading leagues…" onRetry={retryLeagues} />
           {leagues.status === 'success' && (
             <ChoiceList
-              title="Choose Your League"
               choices={leagues.data.map((item) => ({ value: item.key, label: item.name }))}
-              layout="tiles"
+              size="large"
               onChoose={(key) => choose({ league: key, team: null })}
-          />
+            />
           )}
         </>
       )}
 
       {league !== undefined && team === undefined && (
         <>
-          <button
-            type="button"
-            className="back"
-            onClick={() => choose({ league: null, team: null})}
-          >
-            Back to leagues
-          </button>
-          <p className="eyebrow">{league.name}</p>
+          <PageHeader
+            title={league.name}
+            subtitle="Choose Your Team"
+            back={{ label : 'All Leagues', onClick: () => choose({ league: null, team: null}) }}
+          />
           <RequestStatus state={teams} loading="Loading teams…" onRetry={retryTeams} />
           {teams.status === 'success' && (
             <ChoiceList
-              title="Choose Your Team"
               choices={teams.data.map((item) => ({ value: item.roster_id, label: item.team_name }))}
-              layout="list"
+              size="regular"
               onChoose={(rosterId) => choose({ league: league.key, team: rosterId})}
             />
           )}
@@ -77,15 +87,11 @@ function App() {
 
       {league !== undefined && team !== undefined && (
         <>
-          <button
-            type="button"
-            className="back"
-            onClick={() => choose({ league: league.key, team: null})}
-          >
-            Back to teams
-          </button>
-          <p className="eyebrow">{league.name}</p>
-          <h2>{team.team_name}</h2>
+          <PageHeader
+            title={team.team_name}
+            subtitle={roster.status === 'success' ? weekLabel(roster.data) : undefined}
+            back={{ label: league.name, onClick: () => choose({ league: league.key, team: null }) }}
+          />
           <RequestStatus state={roster} loading="Loading lineup…" onRetry={retryRoster} />
           {roster.status ==='success' && <LineupView roster={roster.data} />}
         </>

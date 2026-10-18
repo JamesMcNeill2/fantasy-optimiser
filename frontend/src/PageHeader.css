@@ -1,0 +1,35 @@
+/* Back link, heading and subtitle, evenly spaced. Margins are reset inside
+   so the gap is the only spacing. */
+.page-head {
+  display: grid;
+  justify-items: start;
+  gap: 0.25rem;
+  margin-bottom: 0.875rem;
+}
+
+.page-head > * {
+  margin: 0;
+}
+
+/* The page one level up, as a link with a chevron */
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.375rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.back:hover {
+  text-decoration: underline;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 1.0625rem;
+}

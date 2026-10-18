@@ -1,5 +1,5 @@
 import './ChoiceList.css'
-import { badgeIndex, initials } from './teamBadge'
+import { badgeIndexes, initials } from './teamBadge'
 
 export interface Choice {
   value: number
@@ -7,28 +7,27 @@ export interface Choice {
 }
 
 interface ChoiceListProps {
-  title: string
   choices: Choice[]
   onChoose: (value: number) => void
   // tiles: a few large boxes (leagues). list: many smaller ones with badges (teams).
-  layout: 'tiles' | 'list'
+  size: 'large' | 'regular'
 
 }
 
 // A heading and a grid of clickable boxes, one per choice.
-export function ChoiceList({ title, choices, onChoose, layout }: ChoiceListProps) {
+export function ChoiceList({ choices, onChoose, size }: ChoiceListProps) {
+  const colours = badgeIndexes(choices.map((choice) => choice.label))
+  // League names suit three initials; team names, two
+  const initialCount = size === 'large' ? 3 : 2
   return (
     <section>
-      <h2>{title}</h2>
-      <ul className={`choices choices-${layout}`}>
-        {choices.map((choice) => (
+      <ul className={`choices choices-${size}`}>
+        {choices.map((choice, i) => (
           <li key={choice.value}>
             <button type="button" className="choice" onClick={() => onChoose(choice.value)}>
-              {layout === 'list' && (
-                <span className={`badge badge-${badgeIndex(choice.label)}`} aria-hidden="true">
-                  {initials(choice.label)}
-                </span>
-              )}
+              <span className={`badge badge-${colours[i]}`} aria-hidden="true">
+                {initials(choice.label, initialCount)}
+              </span>
               <span className="choice-label">{choice.label}</span>
             </button>
           </li>

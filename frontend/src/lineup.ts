@@ -1,7 +1,7 @@
 // Display rules for the lineup view. Pure functions: they only read their
 // arguments and return a result, so they're easy to test.
 
-import type { OptimalLineup, RosterPlayer } from './api'
+import type { OptimalLineup, RosterPlayer, RosterResponse } from './api'
 
 // Sleeper's spelling is "canceled".
 // These score nothing, matching the optimiser's NO_POINTS_STATUSES.
@@ -37,22 +37,29 @@ export function playerName(player: RosterPlayer): string {
   return name === '' ? 'Unknown Player' : name
 }
 
+// The opposing team when there's a game to play, or null on a bye, for a
+// cancelled game, or when the game is unknown.
+export function opponentOf(player: RosterPlayer): string | null {
+  if (player.game_status !== null && NO_POINTS_STATUSES.has(player.game_status)) return null
+  return player.opponent
+}
+
 // The game column. "BYE" comes from game_status, never from a missing
-// projection, which also means Out or on IR.
+// projection, which can mean other things (eg. an injured player)
 export function gameLabel(player: RosterPlayer): string {
   if (player.game_status === 'bye') return 'BYE'
   if (player.game_status === 'canceled') return 'Cancelled'
-  return player.opponent === null ? '-': `v ${player.opponent}`
+  const opponent = opponentOf(player)
+  return opponent === null ? '-' : `v ${opponent}`
 }
 
 // The points column.
-// Locked players show points so far; everyone else their projection,
-// or the injury status (or "–") when there isn't one.
+// Locked players show points so far; everyone else their
+// projection, or "-" when there isn't one.
 export function pointsLabel(player: RosterPlayer): string {
   if (player.locked) return formatPoints(player.actual_points ?? 0)
   if (player.game_status !== null && NO_POINTS_STATUSES.has(player.game_status)) return '-'
-  if (player.projected_points !== null) return formatPoints(player.projected_points)
-  return player.injury_status ?? '-'
+  return player.projected_points === null ? '-' : formatPoints(player.projected_points)
 }
 
 export interface LineupChanges {
@@ -115,4 +122,32 @@ const POSITIONS = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF'])
 // The CSS class that colours a position chip; anything unusual gets a neutral one.
 export function positionClass(position: string): string {
   return POSITIONS.has(position) ? `pos-${position.toLowerCase()}` : 'pos-other'
+}
+
+const FLEX_SLOTS = new Set(['WRRB_FLEX', 'REC_FLEX', 'FLEX', 'SUPER_FLEX'])
+
+// The CSS class that colours a slot chip: a position's colour for a position
+// slot, one shared colour for the flex slots, and quieter ones for BN and IR
+export function slotClass(slot: string): string {
+  if (POSITIONS.has(slot)) return positionClass(slot)
+  if (FLEX_SLOTS.has(slot)) return 'slot-flex'
+  if (slot === 'BN') return 'slot-bn'
+  if (slot === 'IR') return 'slot-ir'
+  return 'pos-other'
+}
+
+// The line under the team name, e.g. "Week 6, projected scores".
+export function weekLabel(roster: RosterResponse): string {
+  return `Week ${roster.week}`
+}
+
+// How a player's whole table row is shaded: locked players and players on a
+// bye can't help this week. Out and questionable can join this once there's
+// a fresh injury source.
+export type RowState = 'locked' | 'bye' | null
+
+export function rowState(player: RosterPlayer): RowState {
+  if (player.locked) return 'locked'
+  if (player.game_status === 'bye') return 'bye'
+  return null
 }
