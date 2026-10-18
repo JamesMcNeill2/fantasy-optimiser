@@ -72,11 +72,27 @@
   font-size: 1rem;
 }
 
-.badge-0 { background: #4aa8f0; }
-.badge-1 { background: #2cc2a6; }
-.badge-2 { background: #a57ef0; }
-.badge-3 { background: #f29a4a; }
-.badge-4 { background: #f0607f; }
-.badge-5 { background: #c08a68; }
-.badge-6 { background: #e3c14f; }
-.badge-7 { background: #7f9cf5; }
+.badge-0 {
+  background: #4aa8f0;
+}
+.badge-1 {
+  background: #2cc2a6;
+}
+.badge-2 {
+  background: #a57ef0;
+}
+.badge-3 {
+  background: #f29a4a;
+}
+.badge-4 {
+  background: #f0607f;
+}
+.badge-5 {
+  background: #c08a68;
+}
+.badge-6 {
+  background: #e3c14f;
+}
+.badge-7 {
+  background: #7f9cf5;
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ApiError, getJson} from './api'
+import { ApiError, getJson } from './api'
 
 // What a component sees for one request. The status field says which shape
 // it has, and TypeScript only allows data or error once status is checked.
@@ -29,10 +29,10 @@ export function useApi<T>(path: string | null): [ApiState<T>, () => void] {
       (data) => {
         if (!ignore) setSettled({ path, attempt, state: { status: 'success', data } })
       },
-    (error: unknown) => {
-      const apiError = error instanceof ApiError ? error : new ApiError(0, null)
-      if (!ignore) setSettled({ path, attempt, state: { status: 'error', error: apiError} })
-    },
+      (error: unknown) => {
+        const apiError = error instanceof ApiError ? error : new ApiError(0, null)
+        if (!ignore) setSettled({ path, attempt, state: { status: 'error', error: apiError } })
+      },
     )
     // Cleanup: runs when path or attempt changes before this request finishes,
     // so a slow, out-of-date response can't overwrite a newer one.

@@ -24,9 +24,7 @@ describe('canRetry', () => {
 
 describe('errorText', () => {
   it('explains a failed connection', () => {
-    expect(errorText(new ApiError(0, null))).toBe(
-      'Cannot reach the server. Check your connection.',
-    )
+    expect(errorText(new ApiError(0, null))).toBe('Cannot reach the server. Check your connection.')
   })
 
   it('blames Sleeper for a 502 from the api', () => {

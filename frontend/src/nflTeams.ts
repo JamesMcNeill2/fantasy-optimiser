@@ -1,6 +1,7 @@
 // NFL team colours, for the small team label under each player.
 
 // Each team's primary colour, keyed by Sleeper's team code.
+// prettier-ignore
 const TEAM_COLOURS = new Map([
   ['ARI', '#97233f'], ['ATL', '#a71930'], ['BAL', '#241773'], ['BUF', '#00338d'],
   ['CAR', '#0085ca'], ['CHI', '#0b162a'], ['CIN', '#fb4f14'], ['CLE', '#311d00'],

@@ -37,7 +37,9 @@ export function PageHeader({ title, subtitle, back, onNavigate, headingRef }: Pa
           {back.label}
         </SelectionLink>
       )}
-      <h2 ref={headingRef} tabIndex={-1}>{title}</h2>
+      <h2 ref={headingRef} tabIndex={-1}>
+        {title}
+      </h2>
       {subtitle !== undefined && <p className="subtitle">{subtitle}</p>}
     </header>
   )

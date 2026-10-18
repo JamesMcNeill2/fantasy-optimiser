@@ -4,7 +4,7 @@ import {
   teamsPath,
   type League,
   type RosterResponse,
-  type Team
+  type Team,
 } from './api'
 import { ChoiceList } from './ChoiceList'
 import { LineupView } from './LineupView'
@@ -54,8 +54,8 @@ function App() {
   const previousSelection = useRef(selection)
   useEffect(() => {
     if (previousSelection.current === selection) return
-      previousSelection.current = selection
-      headingRef.current?.focus({ preventScroll: true })
+    previousSelection.current = selection
+    headingRef.current?.focus({ preventScroll: true })
   }, [selection])
 
   // The tab and history title: the page's own heading, then the app's name
@@ -84,7 +84,7 @@ function App() {
               <ChoiceList
                 choices={leagueList.map((item) => ({ value: item.key, label: item.name }))}
                 size="large"
-                linkTo={(key) => ({ league: key, team: null})}
+                linkTo={(key) => ({ league: key, team: null })}
                 onNavigate={choose}
               />
             )}
@@ -93,21 +93,21 @@ function App() {
 
         {page === 'teams' && (
           <>
-          {league !== undefined && (
-            <PageHeader
-              title={league.name}
-              subtitle="Choose Your Team"
-              back={{ label : 'All Leagues', to: {league: null, team: null} }}
-              onNavigate={choose}
-              headingRef={headingRef}
-            />
-          )}
+            {league !== undefined && (
+              <PageHeader
+                title={league.name}
+                subtitle="Choose Your Team"
+                back={{ label: 'All Leagues', to: { league: null, team: null } }}
+                onNavigate={choose}
+                headingRef={headingRef}
+              />
+            )}
             <RequestStatus requests={[leaguesRequest, teamsRequest]} loading="Loading teams…" />
             {league !== undefined && teamList !== undefined && (
               <ChoiceList
                 choices={teamList.map((item) => ({ value: item.roster_id, label: item.team_name }))}
                 size="regular"
-                linkTo={(rosterId) => ({ league: league.key, team: rosterId})}
+                linkTo={(rosterId) => ({ league: league.key, team: rosterId })}
                 onNavigate={choose}
               />
             )}
@@ -120,15 +120,16 @@ function App() {
               <PageHeader
                 title={team.team_name}
                 subtitle={roster.status === 'success' ? weekLabel(roster.data) : undefined}
-                back={{ label: league.name, to: {league: league.key, team: null } }}
+                back={{ label: league.name, to: { league: league.key, team: null } }}
                 onNavigate={choose}
                 headingRef={headingRef}
               />
             )}
             <RequestStatus
               requests={[leaguesRequest, teamsRequest, rosterRequest]}
-              loading="Loading lineup…" />
-            {league !== undefined && team !== undefined && roster.status ==='success' && (
+              loading="Loading lineup…"
+            />
+            {league !== undefined && team !== undefined && roster.status === 'success' && (
               <LineupView roster={roster.data} />
             )}
           </>

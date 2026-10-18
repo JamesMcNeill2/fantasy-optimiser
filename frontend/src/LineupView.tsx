@@ -17,7 +17,7 @@ import {
   rowState,
 } from './lineup'
 import './LineupView.css'
-import { teamColours  } from './nflTeams'
+import { teamColours } from './nflTeams'
 
 interface LineupViewProps {
   roster: RosterResponse
@@ -45,7 +45,7 @@ export function LineupView({ roster }: LineupViewProps) {
             <p className="score-label">Current</p>
             <p className="score-value display">{formatPoints(lineup.current_total)}</p>
           </div>
-            <div className="score">
+          <div className="score">
             <p className="score-label">Optimal</p>
             <p className="score-value display">{formatPoints(lineup.optimal_total)}</p>
           </div>
@@ -76,13 +76,14 @@ export function LineupView({ roster }: LineupViewProps) {
             )}
             {needsPickup.size > 0 && (
               <p className="summary-note summary-warning">
-                Highlighted slots cannot be filled from your roster this week. Pick up a player
-                from waivers.
+                Highlighted slots cannot be filled from your roster this week. Pick up a player from
+                waivers.
               </p>
             )}
             {anyLocked && (
               <p className="summary-note">
-                Locked players current or final scores are used, Sleeper projected points are used for everyone else.
+                Locked players current or final scores are used, Sleeper projected points are used
+                for everyone else.
               </p>
             )}
           </div>
@@ -99,32 +100,38 @@ export function LineupView({ roster }: LineupViewProps) {
             needsPickup={needsPickup.has(slot)}
           />
         ))}
-        </PlayerTable>
+      </PlayerTable>
 
-        <PlayerTable title="Bench">
-          {lineup.bench_ids.map((id) => (
-            <PlayerRow
-              key={id}
-              slot="BN"
-              player={byId.get(id)}
-              change={sitting.has(id) ? 'sit' : undefined}
-            />
+      <PlayerTable title="Bench">
+        {lineup.bench_ids.map((id) => (
+          <PlayerRow
+            key={id}
+            slot="BN"
+            player={byId.get(id)}
+            change={sitting.has(id) ? 'sit' : undefined}
+          />
+        ))}
+      </PlayerTable>
+
+      {reserve.length > 0 && (
+        <PlayerTable title="Injured Reserve">
+          {reserve.map((player) => (
+            <PlayerRow key={player.player_id} slot="IR" player={player} />
           ))}
         </PlayerTable>
-
-        {reserve.length > 0 && (
-          <PlayerTable title="Injured Reserve">
-            {reserve.map((player) => (
-              <PlayerRow key={player.player_id} slot="IR" player={player} />
-            ))}
-          </PlayerTable>
       )}
     </>
   )
 }
 
 // One line in the summary: who to start or bench, and their points.
-function MoveRow({ action, player }: { action: 'start' | 'bench'; player: RosterPlayer | undefined }) {
+function MoveRow({
+  action,
+  player,
+}: {
+  action: 'start' | 'bench'
+  player: RosterPlayer | undefined
+}) {
   return (
     <li className="move">
       <span className={`move-action move-${action}`}>{action === 'start' ? 'Start' : 'Bench'}</span>
@@ -144,7 +151,7 @@ function MoveRow({ action, player }: { action: 'start' | 'bench'; player: Roster
 }
 
 // Position in its colour and the NFL team in theirs, e.g. "QB BUF".
-function PlayerDetails({ player }: { player: RosterPlayer}) {
+function PlayerDetails({ player }: { player: RosterPlayer }) {
   return (
     <span className="player-details">
       {player.position !== null && (
@@ -180,7 +187,7 @@ function GameCell({ player }: { player: RosterPlayer }) {
 // A titled table with the column headings every player list shares. The
 // heading also names the table, so a screen reader's table list says
 // "Starters" rather than just "table".
-function PlayerTable({ title, children }: { title: string; children: ReactNode}) {
+function PlayerTable({ title, children }: { title: string; children: ReactNode }) {
   const headingId = useId()
   return (
     <>
@@ -197,10 +204,10 @@ function PlayerTable({ title, children }: { title: string; children: ReactNode})
               </th>
             </tr>
           </thead>
-        <tbody>{children}</tbody>
-      </table>
-    </div>
-  </>
+          <tbody>{children}</tbody>
+        </table>
+      </div>
+    </>
   )
 }
 
@@ -213,7 +220,7 @@ interface PlayerRowProps {
 
 // One player, or an empty slot when player is undefined. slot is the raw slot
 // type (QB, WRRB_FLEX, BN, IR), shown as a coloured cell filling the row's height.
-function PlayerRow({slot, player, change, needsPickup = false }: PlayerRowProps) {
+function PlayerRow({ slot, player, change, needsPickup = false }: PlayerRowProps) {
   const slotCell = (
     <th scope="row" className="slot-cell">
       <span className={`slot-chip ${slotClass(slot)}`}>{slotLabel(slot)}</span>
@@ -249,7 +256,7 @@ function PlayerRow({slot, player, change, needsPickup = false }: PlayerRowProps)
       </td>
       <td>
         <GameCell player={player} />
-        </td>
+      </td>
       <td className="points">{pointsLabel(player)}</td>
     </tr>
   )

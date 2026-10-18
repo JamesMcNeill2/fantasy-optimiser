@@ -16,7 +16,7 @@ export function ErrorMessage({ error, onRetry }: ErrorMessageProps) {
           {' '}
           <button type="button" onClick={onRetry}>
             Try again
-        </button>
+          </button>
         </>
       )}
     </p>

@@ -15,7 +15,7 @@ interface RequestStatusProps {
 // order: the first one that hasn't succeeded decides what shows. Parent lists
 // come first, so a stale id's 404 is never shown before the list that
 // corrects it. Nothing shows once they've all succeeded.
-export function RequestStatus({ requests, loading, }: RequestStatusProps) {
+export function RequestStatus({ requests, loading }: RequestStatusProps) {
   // Try again re-runs every failed request, not just the one shown
   const retryFailed = () => {
     for (const request of requests) {

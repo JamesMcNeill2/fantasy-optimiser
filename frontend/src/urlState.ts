@@ -18,7 +18,7 @@ function readNumber(params: URLSearchParams, name: string): number | null {
 function readSelection(): Selection {
   const params = new URLSearchParams(window.location.search)
   const league = readNumber(params, 'league')
-  return { league, team: league === null ? null : readNumber(params, 'team')}
+  return { league, team: league === null ? null : readNumber(params, 'team') }
 }
 
 export function selectionUrl(selection: Selection): string {

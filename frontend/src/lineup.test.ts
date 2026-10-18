@@ -92,9 +92,9 @@ describe('gameLabel', () => {
 })
 
 describe('pointsLabel', () => {
-     it('shows the projection to two decimal places', () => {
-       expect(pointsLabel(player({ projected_points: 12.456 }))).toBe('12.46')
-     })
+  it('shows the projection to two decimal places', () => {
+    expect(pointsLabel(player({ projected_points: 12.456 }))).toBe('12.46')
+  })
 
   it('shows a dash when there is no projection', () => {
     expect(pointsLabel(player({ projected_points: null }))).toBe('-')
@@ -105,9 +105,9 @@ describe('pointsLabel', () => {
   })
 
   it('shows points so far for a locked player', () => {
-    expect(
-      pointsLabel(player({ locked: true, game_status: 'in_game', actual_points: 7.20 })),
-    ).toBe('7.20')
+    expect(pointsLabel(player({ locked: true, game_status: 'in_game', actual_points: 7.2 }))).toBe(
+      '7.20',
+    )
   })
 
   it('counts a locked player with no points yet as 0', () => {

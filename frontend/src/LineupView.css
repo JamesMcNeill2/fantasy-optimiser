@@ -241,14 +241,35 @@
 
 /* Colour classes set --pos-fill (a background) and --pos-ink (the same colour
    as text, darker in light mode so it stays readable) */
-.pos-qb { --pos-fill: var(--pos-qb); --pos-ink: light-dark(#c0284c, var(--pos-qb)); }
-.pos-rb { --pos-fill: var(--pos-rb); --pos-ink: light-dark(#0f7d69, var(--pos-rb)); }
-.pos-wr { --pos-fill: var(--pos-wr); --pos-ink: light-dark(#1a6fb5, var(--pos-wr)); }
-.pos-te { --pos-fill: var(--pos-te); --pos-ink: light-dark(#b45a12, var(--pos-te)); }
-.pos-k { --pos-fill: var(--pos-k); --pos-ink: light-dark(#6d43c9, var(--pos-k)); }
-.pos-def { --pos-fill: var(--pos-def); --pos-ink: light-dark(#8a5534, var(--pos-def)); }
+.pos-qb {
+  --pos-fill: var(--pos-qb);
+  --pos-ink: light-dark(#c0284c, var(--pos-qb));
+}
+.pos-rb {
+  --pos-fill: var(--pos-rb);
+  --pos-ink: light-dark(#0f7d69, var(--pos-rb));
+}
+.pos-wr {
+  --pos-fill: var(--pos-wr);
+  --pos-ink: light-dark(#1a6fb5, var(--pos-wr));
+}
+.pos-te {
+  --pos-fill: var(--pos-te);
+  --pos-ink: light-dark(#b45a12, var(--pos-te));
+}
+.pos-k {
+  --pos-fill: var(--pos-k);
+  --pos-ink: light-dark(#6d43c9, var(--pos-k));
+}
+.pos-def {
+  --pos-fill: var(--pos-def);
+  --pos-ink: light-dark(#8a5534, var(--pos-def));
+}
 .pos-other,
-.slot-flex { --pos-fill: var(--pos-other); --pos-ink: var(--muted); }
+.slot-flex {
+  --pos-fill: var(--pos-other);
+  --pos-ink: var(--muted);
+}
 
 .slot-chip.slot-bn {
   background: var(--locked-bg);

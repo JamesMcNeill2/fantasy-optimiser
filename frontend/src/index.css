@@ -128,5 +128,5 @@ button:hover {
 }
 
 .error {
-  color: var(--sit-text)
+  color: var(--sit-text);
 }

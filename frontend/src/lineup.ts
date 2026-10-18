@@ -31,7 +31,6 @@ export function isGain(gain: number): boolean {
   return Math.round(gain * 100) > 0
 }
 
-
 export function playerName(player: RosterPlayer): string {
   const name = [player.first_name, player.last_name].filter((part) => part !== null).join(' ')
   return name === '' ? 'Unknown Player' : name
@@ -86,7 +85,7 @@ export function lineupChanges(players: RosterPlayer[], lineup: OptimalLineup): L
 
 // Starting slots (by index) that no lineup change can fix: the slot is empty,
 // or its best available player scores 0. The fix is a waiver pickup.
-export function slotsNeedingPickup(players: RosterPlayer[], lineup: OptimalLineup): Set<number>{
+export function slotsNeedingPickup(players: RosterPlayer[], lineup: OptimalLineup): Set<number> {
   const byId = new Map(players.map((player) => [player.player_id, player]))
   const flagged = new Set<number>()
   lineup.starter_ids.forEach((id, slot) => {
