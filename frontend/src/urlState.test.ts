@@ -1,5 +1,10 @@
+// @vitest-environment jsdom
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { trustedId } from './urlState'
+import { setUpBrowserTests } from './testHelpers'
+import { trustedId, useSelection } from './urlState'
+
+setUpBrowserTests()
 
 const leagues = [{ key: 0 }, { key: 1 }]
 const keyOf = (item: { key: number }) => item.key
@@ -20,5 +25,32 @@ describe('trustedId', () => {
   it('gives null when there is no id', () => {
     expect(trustedId(null, leagues, keyOf)).toBeNull()
     expect(trustedId(null, undefined, keyOf)).toBeNull()
+  })
+})
+
+describe('useSelection', () => {
+  it('reads the league and team from the address bar', () => {
+    window.history.replaceState(null, '', '/?league=1&team=4')
+    const { result } = renderHook(() => useSelection())
+    expect(result.current[0]).toEqual({ league: 1, team: 4 })
+  })
+
+  it('ignores a team without a league, and anything that is not a whole number', () => {
+    window.history.replaceState(null, '', '/?team=4')
+    expect(renderHook(() => useSelection()).result.current[0]).toEqual({ league: null, team: null })
+
+    window.history.replaceState(null, '', '/?league=abc&team=4')
+    expect(renderHook(() => useSelection()).result.current[0]).toEqual({ league: null, team: null })
+  })
+
+  it('adds a history entry for each choice, and Back restores the one before', async () => {
+    const { result } = renderHook(() => useSelection())
+    act(() => result.current[1]({ league: 0, team: null }))
+    act(() => result.current[1]({ league: 0, team: 8 }))
+    expect(window.location.search).toBe('?league=0&team=8')
+
+    window.history.back()
+    await waitFor(() => expect(result.current[0]).toEqual({ league: 0, team: null }))
+    expect(window.location.search).toBe('?league=0')
   })
 })
