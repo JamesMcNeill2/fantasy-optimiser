@@ -16,7 +16,7 @@ interface RequestStatusProps {
 // come first, so a stale id's 404 is never shown before the list that
 // corrects it. Nothing shows once they've all succeeded.
 export function RequestStatus({ requests, loading }: RequestStatusProps) {
-  // Try again re-runs every failed request, not just the one shown
+  // Try Again re-runs every failed request, not just the one shown
   const retryFailed = () => {
     for (const request of requests) {
       if (request.state.status === 'error') request.onRetry()

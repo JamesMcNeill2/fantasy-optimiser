@@ -88,7 +88,7 @@ Vitest, with test files next to the code they test.
   string and starts every request they imply at once. An id is trusted until
   its list arrives (`trustedId`); a stale one drops the page back a level.
 - **`RequestStatus` checks a page's requests in order**, parent lists first,
-  so a stale link's 404 is never shown. Try again re-runs every failed request.
+  so a stale link's 404 is never shown. Try Again re-runs every failed request.
 - **Navigation is real links** (`SelectionLink`): a plain click is handled in
   the page with `pushState`, while Ctrl/Cmd-click and middle-click open a new
   tab. Back and Forward work through a `popstate` listener.
