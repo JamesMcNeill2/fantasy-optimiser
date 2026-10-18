@@ -43,11 +43,13 @@ export function useSelection(): [Selection, (next: Selection) => void] {
   }, [])
 
   function choose(next: Selection) {
-    window.history.pushState(null, '', selectionUrl(next))
-    setSelection(next)
+    // Choosing the page you're on adds no history entry; it just scrolls to the top
+    if (selectionUrl(next) !== selectionUrl(selection)) {
+      window.history.pushState(null, '', selectionUrl(next))
+      setSelection(next)
+    }
     window.scrollTo(0, 0)
   }
-
   return [selection, choose]
 }
 

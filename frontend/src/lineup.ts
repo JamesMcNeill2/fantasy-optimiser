@@ -83,15 +83,19 @@ export function lineupChanges(players: RosterPlayer[], lineup: OptimalLineup): L
 }
 
 // Starting slots (by index) that no lineup change can fix: the slot is empty,
-// or its best available player scores 0. The fix is a waiver pickup.
+// or its unlocked starter scores 0. The fix is a waiver pickup. A starter
+// missing from the player list isn't flagged: someone is in the slot, the
+// page just can't show who.
 export function slotsNeedingPickup(players: RosterPlayer[], lineup: OptimalLineup): Set<number> {
   const byId = new Map(players.map((player) => [player.player_id, player]))
   const flagged = new Set<number>()
   lineup.starter_ids.forEach((id, slot) => {
-    const player = id === null ? undefined : byId.get(id)
-    if (player === undefined || (!player.locked && selectionValue(player) <= 0)) {
+    if (id === null) {
       flagged.add(slot)
+      return
     }
+    const player = byId.get(id)
+    if (player !== undefined && !player.locked && selectionValue(player) <= 0) flagged.add(slot)
   })
   return flagged
 }
@@ -111,7 +115,7 @@ export function slotLabel(slot: string): string {
 // The summary's headline: how many swaps the lineup needs.
 export function changeVerdict(changes: LineupChanges): string {
   const count = Math.max(changes.start.length, changes.bench.length)
-  if (count === 0) return 'Your lineup is optimal'
+  if (count === 0) return 'Your Lineup Is Optimal'
   return count === 1 ? '1 change' : `${count} changes`
 }
 
@@ -134,7 +138,7 @@ export function slotClass(slot: string): string {
   return 'pos-other'
 }
 
-// The line under the team name, e.g. "Week 6, projected scores".
+// The line under the team name on the lineup page, e.g. "Week 6".
 export function weekLabel(roster: RosterResponse): string {
   return `Week ${roster.week}`
 }

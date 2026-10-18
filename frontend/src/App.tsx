@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import {
   leaguesPath,
   rosterPath,
@@ -14,7 +15,6 @@ import { trustedId, useSelection } from './urlState'
 import { weekLabel } from './lineup'
 import { PageHeader } from './PageHeader'
 import { SelectionLink } from './SelectionLink'
-import { useEffect, useRef } from 'react'
 
 const APP_NAME = "Mac's Fantasy Lineup Optimiser"
 

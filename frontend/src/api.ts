@@ -20,8 +20,8 @@ export function teamsPath(leagueKey: number): string {
   return `/api/leagues/${leagueKey}/teams`
 }
 
-export function rosterPath(leagueKey: number, rosterID: number): string {
-  return `/api/leagues/${leagueKey}/teams/${rosterID}/roster`
+export function rosterPath(leagueKey: number, rosterId: number): string {
+  return `/api/leagues/${leagueKey}/teams/${rosterId}/roster`
 }
 
 // A failed request. status is the HTTP status, or 0 if the server couldn't

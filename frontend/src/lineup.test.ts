@@ -159,6 +159,10 @@ describe('slotsNeedingPickup', () => {
     const players = [player({ player_id: '2' })]
     expect(slotsNeedingPickup(players, lineup(['2']))).toEqual(new Set())
   })
+
+  it('does not flag a starter missing from the player list', () => {
+    expect(slotsNeedingPickup([], lineup(['2']))).toEqual(new Set())
+  })
 })
 
 describe('slotLabel', () => {
@@ -199,7 +203,7 @@ describe('isGain', () => {
 
 describe('changeVerdict', () => {
   it('says when there is nothing to change', () => {
-    expect(changeVerdict({ start: [], bench: [] })).toBe('Your lineup is optimal')
+    expect(changeVerdict({ start: [], bench: [] })).toBe('Your Lineup Is Optimal')
   })
 
   it('counts one swap as one change', () => {

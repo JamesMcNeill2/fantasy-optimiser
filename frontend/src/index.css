@@ -1,16 +1,3 @@
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-/* The page's centred column: the site header and main both sit in #root */
-#root {
-  max-width: 50rem;
-  margin: 0 auto;
-  padding: 0.75rem 1rem 2rem;
-}
-
 /* Matchday slate. light-dark() picks the first value in light mode and the
    second in dark, following the visitor's system setting. */
 :root {
@@ -52,6 +39,19 @@
 
 body {
   margin: 0;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* The page's centred column: the site header and main both sit in #root */
+#root {
+  max-width: 50rem;
+  margin: 0 auto;
+  padding: 0.75rem 1rem 2rem;
 }
 
 /* Condensed and heavy: the scoreboard type for names and scores */

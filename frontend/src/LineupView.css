@@ -281,7 +281,7 @@
   color: var(--sit-text);
 }
 
-/* Small labels after names: Start, Bench, Locked, Needs pickup */
+/* Small labels after names: Start, Bench, Locked, Needs Pickup */
 .tag {
   display: inline-block;
   margin-left: 0.5rem;

@@ -130,7 +130,7 @@ describe('App', () => {
     await settle() // all three failures are in
 
     serverUp = true
-    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Try Again' }))
     await screen.findByRole('heading', { name: 'Big boys' })
     expect(screen.queryByRole('alert')).toBeNull()
   })

@@ -1,7 +1,7 @@
+import type { Ref } from 'react'
 import './PageHeader.css'
 import { SelectionLink } from './SelectionLink'
 import type { Selection } from './urlState'
-import type { Ref } from 'react'
 
 interface PageHeaderProps {
   title: string

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { setUpBrowserTests } from './testHelpers'
 import { trustedId, useSelection } from './urlState'
 
@@ -52,5 +52,15 @@ describe('useSelection', () => {
     window.history.back()
     await waitFor(() => expect(result.current[0]).toEqual({ league: 0, team: null }))
     expect(window.location.search).toBe('?league=0')
+  })
+
+  it('adds no history entry when the choice is the page already shown', () => {
+    window.history.replaceState(null, '', '/?league=0')
+    const { result } = renderHook(() => useSelection())
+    const pushState = vi.spyOn(window.history, 'pushState')
+
+    act(() => result.current[1]({ league: 0, team: null }))
+    expect(pushState).not.toHaveBeenCalled()
+    expect(window.scrollTo).toHaveBeenCalledWith(0, 0)
   })
 })

@@ -6,7 +6,7 @@ interface ErrorMessageProps {
   onRetry: () => void
 }
 
-// A failed request's message, with a Try again button when retrying could help.
+// A failed request's message, with a Try Again button when retrying could help.
 export function ErrorMessage({ error, onRetry }: ErrorMessageProps) {
   return (
     <p role="alert" className="error">
@@ -15,7 +15,7 @@ export function ErrorMessage({ error, onRetry }: ErrorMessageProps) {
         <>
           {' '}
           <button type="button" onClick={onRetry}>
-            Try again
+            Try Again
           </button>
         </>
       )}

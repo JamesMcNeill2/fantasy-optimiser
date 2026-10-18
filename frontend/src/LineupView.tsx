@@ -39,7 +39,7 @@ export function LineupView({ roster }: LineupViewProps) {
 
   return (
     <>
-      <section className="summary" aria-label="Lineup summary">
+      <section className="summary" aria-label="Lineup Summary">
         <div className="scores">
           <div className="score">
             <p className="score-label">Current</p>
@@ -82,8 +82,8 @@ export function LineupView({ roster }: LineupViewProps) {
             )}
             {anyLocked && (
               <p className="summary-note">
-                Locked players current or final scores are used, Sleeper projected points are used
-                for everyone else.
+                Totals use live or final points for locked players. Sleeper's projections used for
+                players yet to start.
               </p>
             )}
           </div>
@@ -91,15 +91,19 @@ export function LineupView({ roster }: LineupViewProps) {
       </section>
 
       <PlayerTable title="Starters">
-        {lineup.starter_ids.map((id, slot) => (
-          <PlayerRow
-            key={slot}
-            slot={slots[slot]}
-            player={id === null ? undefined : byId.get(id)}
-            change={id !== null && starting.has(id) ? 'start' : undefined}
-            needsPickup={needsPickup.has(slot)}
-          />
-        ))}
+        {lineup.starter_ids.map((id, slot) =>
+          id === null ? (
+            <EmptyRow key={slot} slot={slots[slot]} />
+          ) : (
+            <PlayerRow
+              key={slot}
+              slot={slots[slot]}
+              player={byId.get(id)}
+              change={starting.has(id) ? 'start' : undefined}
+              needsPickup={needsPickup.has(slot)}
+            />
+          ),
+        )}
       </PlayerTable>
 
       <PlayerTable title="Bench">
@@ -218,21 +222,44 @@ interface PlayerRowProps {
   needsPickup?: boolean
 }
 
-// One player, or an empty slot when player is undefined. slot is the raw slot
-// type (QB, WRRB_FLEX, BN, IR), shown as a coloured cell filling the row's height.
-function PlayerRow({ slot, player, change, needsPickup = false }: PlayerRowProps) {
-  const slotCell = (
+// The slot type (QB, WRRB_FLEX, BN, IR) as a coloured chip filling the cell's height.
+function SlotCell({ slot }: { slot: string }) {
+  return (
     <th scope="row" className="slot-cell">
       <span className={`slot-chip ${slotClass(slot)}`}>{slotLabel(slot)}</span>
     </th>
   )
+}
+
+// A starting slot nobody on the roster can fill.
+function EmptyRow({ slot }: { slot: string }) {
+  return (
+    <tr className="needs-pickup">
+      <SlotCell slot={slot} />
+      <td colSpan={3}>
+        Empty <span className="tag tag-pickup">Needs Pickup</span>
+      </td>
+    </tr>
+  )
+}
+
+// One player. player is undefined when the lineup names an id that isn't in
+// the roster's player list; the summary shows that as Unknown Player too.
+function PlayerRow({ slot, player, change, needsPickup = false }: PlayerRowProps) {
+  const changeTag = (
+    <>
+      {change === 'start' && <span className="tag tag-start">Start</span>}
+      {change === 'sit' && <span className="tag tag-sit">Bench</span>}
+    </>
+  )
 
   if (player === undefined) {
     return (
-      <tr className="needs-pickup">
-        {slotCell}
+      <tr>
+        <SlotCell slot={slot} />
         <td colSpan={3}>
-          Empty <span className="tag tag-pickup">Needs Pickup</span>
+          <span className="player-name">Unknown Player</span>
+          {changeTag}
         </td>
       </tr>
     )
@@ -245,11 +272,10 @@ function PlayerRow({ slot, player, change, needsPickup = false }: PlayerRowProps
 
   return (
     <tr className={rowClasses === '' ? undefined : rowClasses}>
-      {slotCell}
+      <SlotCell slot={slot} />
       <td>
         <span className="player-name">{playerName(player)}</span>
-        {change === 'start' && <span className="tag tag-start">Start</span>}
-        {change === 'sit' && <span className="tag tag-sit">Bench</span>}
+        {changeTag}
         {player.locked && <span className="tag tag-locked">Locked</span>}
         {needsPickup && <span className="tag tag-pickup">Needs Pickup</span>}
         <PlayerDetails player={player} />
