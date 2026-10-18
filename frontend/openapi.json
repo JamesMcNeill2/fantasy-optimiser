@@ -1,0 +1,469 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Fantasy Lineup Optimiser API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "Health",
+        "description": "Return a simple health-check payload for the API.\n\nReturns:\n    dict[str, str]: The API health status payload.",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Api Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/leagues": {
+      "get": {
+        "summary": "List Leagues",
+        "description": "List configured leagues with their display names from Sleeper.\n\nArgs:\n    config: The application configuration containing the configured league IDs.\n    client: The HTTP client used to query Sleeper.\n\nReturns:\n    list[League]: The league definitions including display names.",
+        "operationId": "list_leagues_api_leagues_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/League"
+                  },
+                  "type": "array",
+                  "title": "Response List Leagues Api Leagues Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/leagues/{league_key}/teams": {
+      "get": {
+        "summary": "List Teams",
+        "description": "List all teams in a league with their resolved display names.\n\nArgs:\n    league_id: The Sleeper league identifier.\n    tables: The configured DynamoDB tables used by the API.\n    client: The HTTP client used to query Sleeper.\n\nReturns:\n    list[Team]: The teams in the league sorted by display name.",
+        "operationId": "list_teams_api_leagues__league_key__teams_get",
+        "parameters": [
+          {
+            "name": "league_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "League Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Team"
+                  },
+                  "title": "Response List Teams Api Leagues  League Key  Teams Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/leagues/{league_key}/teams/{roster_id}/roster": {
+      "get": {
+        "summary": "Get Roster",
+        "description": "Return a team's roster, current-game details and optimal lineup.\n\nFetches the league's slot layout, this week's games and actual points from\nSleeper, player details from DynamoDB and projections from Sleeper, then\nruns the lineup optimiser. Locked players keep their slots.\n\nArgs:\n    league_id: The Sleeper league identifier.\n    roster_id: The roster identifier to fetch.\n    client: The HTTP client used to query Sleeper.\n    dynamodb: The DynamoDB resource used for player metadata lookups.\n    tables: The configured DynamoDB tables.\n\nReturns:\n    RosterResponse: The team's players, the league's starting slot types and\n        the optimal lineup with its totals.\n\nRaises:\n    HTTPException: A 404 if the team is not in the league.\n    HTTPException: A 502 if a Sleeper request fails or returns unexpected\n        data, including a slot layout that doesn't match the roster's\n        starters.",
+        "operationId": "get_roster_api_leagues__league_key__teams__roster_id__roster_get",
+        "parameters": [
+          {
+            "name": "roster_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Roster Id"
+            }
+          },
+          {
+            "name": "league_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "League Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RosterResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "League": {
+        "properties": {
+          "key": {
+            "type": "integer",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "name"
+        ],
+        "title": "League",
+        "description": "A Sleeper league summary returned by the API.\n\nAttributes:\n    key: The configured index of the league.\n    name: The display name for the league."
+      },
+      "OptimalLineup": {
+        "properties": {
+          "starter_ids": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Starter Ids"
+          },
+          "bench_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Bench Ids"
+          },
+          "optimal_total": {
+            "type": "number",
+            "title": "Optimal Total"
+          },
+          "current_total": {
+            "type": "number",
+            "title": "Current Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "starter_ids",
+          "bench_ids",
+          "optimal_total",
+          "current_total"
+        ],
+        "title": "OptimalLineup",
+        "description": "The optimal lineup for a roster, with its points totals.\n\nBoth totals count locked players' actual points and everyone else's\nprojection, which is 0 for a bye, a canceled game or a missing projection.\n\nAttributes:\n    starter_ids: Player IDs in starting-slot order, matching\n        RosterResponse.slots; None marks a slot nobody can fill.\n    bench_ids: Player IDs not in the optimal lineup, in roster order,\n        excluding IR players.\n    optimal_total: Points for the optimal lineup.\n    current_total: Points for the lineup currently set in Sleeper."
+      },
+      "RosterPlayer": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "title": "Player Id"
+          },
+          "starter_slot": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starter Slot"
+          },
+          "reserve": {
+            "type": "boolean",
+            "title": "Reserve"
+          },
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team"
+          },
+          "injury_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Injury Status"
+          },
+          "projected_points": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projected Points"
+          },
+          "opponent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opponent"
+          },
+          "game_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Game Status"
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked",
+            "default": false
+          },
+          "actual_points": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Points"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "starter_slot",
+          "reserve",
+          "first_name",
+          "last_name",
+          "position",
+          "team",
+          "injury_status",
+          "projected_points",
+          "opponent",
+          "game_status",
+          "locked",
+          "actual_points"
+        ],
+        "title": "RosterPlayer",
+        "description": "A single player entry from a roster response.\n\nAttributes:\n    player_id: The Sleeper player identifier.\n    starter_slot: The starter slot index when the player is active.\n    reserve: Whether the player is in the reserve list.\n    first_name: The player's first name when available.\n    last_name: The player's last name when available.\n    position: The player's position.\n    team: The player's team abbreviation.\n    injury_status: The player's injury status.\n    projected_points: The projected points for the week.\n    opponent: The player's opponent for the week.\n    game_status: The current game state.\n    locked: Whether the player is in a locked game state.\n    actual_points: The player's points scored in the current week, when available."
+      },
+      "RosterResponse": {
+        "properties": {
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/RosterPlayer"
+            },
+            "type": "array",
+            "title": "Players"
+          },
+          "season": {
+            "type": "string",
+            "title": "Season"
+          },
+          "week": {
+            "type": "integer",
+            "title": "Week"
+          },
+          "slots": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Slots"
+          },
+          "lineup": {
+            "$ref": "#/components/schemas/OptimalLineup"
+          }
+        },
+        "type": "object",
+        "required": [
+          "players",
+          "season",
+          "week",
+          "slots",
+          "lineup"
+        ],
+        "title": "RosterResponse",
+        "description": "A roster response containing all players for a team.\n\nAttributes:\n    players: The rostered players for the team.\n    season: The season identifier for the roster data.\n    week: The week number for the roster data.\n    slots: The ordered starting lineup positions for the league.\n    lineup: The optimal lineup evaluation for the roster."
+      },
+      "Team": {
+        "properties": {
+          "roster_id": {
+            "type": "integer",
+            "title": "Roster Id"
+          },
+          "team_name": {
+            "type": "string",
+            "title": "Team Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "roster_id",
+          "team_name"
+        ],
+        "title": "Team",
+        "description": "A team summary within a league.\n\nAttributes:\n    roster_id: The Sleeper roster identifier.\n    team_name: The display name for the team."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

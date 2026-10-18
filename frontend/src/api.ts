@@ -1,46 +1,15 @@
-// Types for the api's responses. They mirror the Pydantic response models in
-// services/api/app/main.py, so keep the two in step.
+// Types for the api's responses, generated from its OpenAPI schema
+// (npm run gen:api). To change one, change the Pydantic model in
+// services/api/app/main.py and regenerate; never edit api-schema.ts.
+import type { components } from './api-schema'
 
-export interface League {
-  key: number
-  name: string
-}
+type Schemas = components['schemas']
 
-export interface Team {
-  roster_id: number
-  team_name: string
-}
-
-export interface RosterPlayer {
-  player_id: string
-  starter_slot: number | null
-  reserve: boolean
-  first_name: string | null
-  last_name: string | null
-  position: string | null
-  team: string | null
-  injury_status: string | null
-  projected_points: number | null
-  opponent: string | null
-  game_status: string | null
-  locked: boolean
-  actual_points: number | null
-}
-
-export interface OptimalLineup {
-  starter_ids: (string | null)[]
-  bench_ids: string[]
-  optimal_total: number
-  current_total: number
-}
-
-export interface RosterResponse {
-  players: RosterPlayer[]
-  season: string
-  week: number
-  slots: string[]
-  lineup: OptimalLineup
-}
+export type League = Schemas['League']
+export type Team = Schemas['Team']
+export type RosterPlayer = Schemas['RosterPlayer']
+export type OptimalLineup = Schemas['OptimalLineup']
+export type RosterResponse = Schemas['RosterResponse']
 
 // URL paths for each route. Relative, so they work locally (through the
 // Vite proxy) and deployed (through CloudFront) without changes.
