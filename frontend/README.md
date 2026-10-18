@@ -1,39 +1,128 @@
 # Frontend
 
-React + TypeScript single-page app, built with Vite. It calls the api through
-relative `/api/...` paths: CloudFront routes them when deployed, and Vite's
-dev-server proxy does locally.
+The fantasy lineup optimiser's single-page app: React and TypeScript, built
+with Vite. It has three views on one page (leagues, then a league's teams, then
+a team's lineup), with the choice kept in the query string (`/?league=0&team=8`)
+so a refresh or a shared link opens the same view.
+
+The app calls the api through relative `/api/...` paths. When deployed,
+CloudFront routes them to the api; locally, Vite's proxy does.
 
 ## Local development
 
-Needs Node 24 (see `.nvmrc`) and the api running locally:
+Needs Node 24 (see `.nvmrc`; 24.15 or later for the jsdom tests) and the api
+running locally:
 
 ```powershell
-# services/api
+# terminal 1, from services/api
 uv run --env-file ..\..\.env uvicorn app.main:app --reload
 
-# frontend
+# terminal 2, from frontend
 npm install
 npm run dev        # http://localhost:5173
 ```
 
 To use a deployed api instead, set `API_PROXY_TARGET` (e.g.
-`https://<distribution>.cloudfront.net`) before `npm run dev`.
+`https://<distribution>.cloudfront.net`) before `npm run dev` or
+`npm run preview`.
+
+The dev server runs the app in React's `StrictMode`, which runs effects twice,
+so every request appears twice in the browser's Network tab. Use
+`npm run build` then `npm run preview` to see real request behaviour.
 
 ## Checks
 
+Run from `frontend`; CI runs the same ones before deploying.
+
 ```powershell
-npm run lint
-npx vitest run
-npm run build      # type-checks, then builds into dist/
-npm run preview    # serves dist/ at http://localhost:4173, same proxy
+npm run format:check   # Prettier (npm run format fixes)
+npm run lint           # ESLint
+npx vitest run         # every test once (npm test watches)
+npm run build          # type-checks src, tests included, then builds into dist/
+npm run preview        # serves dist/ at http://localhost:4173, same proxy
 ```
+
+## Api types
+
+The response types are generated from the api's OpenAPI schema, not written
+by hand. After changing a Pydantic response model in
+`services/api/app/main.py`:
+
+```powershell
+npm run gen:api    # needs uv
+npm run build      # lists every place the change affects
+```
+
+`gen:api` runs `services/api/export_openapi.py`, which writes `openapi.json`,
+then openapi-typescript, which writes `src/api-schema.ts`. Commit both with the
+model change: CI regenerates them and fails if they differ. Never edit either
+by hand.
+
+openapi-typescript 7 declares TypeScript 5 as a peer, so an `overrides` entry
+in `package.json` points it at this project's TypeScript 6. Remove it once a
+release accepts TypeScript 6 (`npm view openapi-typescript peerDependencies`).
+
+## Formatting
+
+Prettier, pinned to an exact version so local and CI output match: no
+semicolons, single quotes, 100-character lines (`.prettierrc.json`).
+`.prettierignore` skips the lock file and the two generated files. The NFL
+colour table in `nflTeams.ts` keeps its grid with `// prettier-ignore`.
+
+## Tests
+
+Vitest, with test files next to the code they test.
+
+- **Pure functions** run in Node: `lineup.test.ts` (display rules),
+  `errors.test.ts`, `teamBadge.test.ts` and `nflTeams.test.ts`.
+- **Hooks and pages** run in jsdom (a `// @vitest-environment jsdom` comment
+  at the top of the file) with React Testing Library: `useApi.test.ts`,
+  `urlState.test.ts` and `App.test.tsx`.
+- **`testHelpers.ts`** has the shared pieces: a fake `fetch` (`stubFetch`,
+  `json`), `deferred` to control the order responses arrive in, `settle`, and
+  `setUpBrowserTests` for clean-up between tests.
+
+## How the page works
+
+- **The URL decides the page.** `App` reads the league and team from the query
+  string and starts every request they imply at once. An id is trusted until
+  its list arrives (`trustedId`); a stale one drops the page back a level.
+- **`RequestStatus` checks a page's requests in order**, parent lists first,
+  so a stale link's 404 is never shown. Try again re-runs every failed request.
+- **Navigation is real links** (`SelectionLink`): a plain click is handled in
+  the page with `pushState`, while Ctrl/Cmd-click and middle-click open a new
+  tab. Back and Forward work through a `popstate` listener.
+- **Accessibility:** focus moves to the new page's heading after each
+  navigation (not on first load), each page sets `document.title`, loading
+  lines are `role="status"`, and each table is named by its heading.
 
 ## Layout
 
-- `api.ts`: response types, paths, `getJson`, `ApiError`
-- `useApi.ts`: loading / error / success hook
-- `urlState.ts`: `?league=&team=` in the address bar
-- `lineup.ts`: display rules (tested in `lineup.test.ts`)
-- `errors.ts`: error messages and retry rules (tested in `errors.test.ts`)
-- Components: `App`, `Picker`, `LineupView`, `RequestStatus`, `ErrorMessage`
+All in `src/`:
+
+| File | What it does |
+|---|---|
+| `main.tsx` | Entry point: the font, global CSS and `App` in `StrictMode` |
+| `App.tsx` | Picks the page from the URL, starts the requests, moves focus, sets the title |
+| `api.ts` | Response types (from `api-schema.ts`), paths, `getJson`, `ApiError` |
+| `api-schema.ts` | Generated by `gen:api`; never edit |
+| `useApi.ts` | Loading / error / success hook for one request |
+| `urlState.ts` | `useSelection`, `selectionUrl`, `trustedId` |
+| `errors.ts` | Error messages and retry rules |
+| `lineup.ts` | Display rules for the lineup view |
+| `teamBadge.ts` | Initials and colours for the league and team badges |
+| `nflTeams.ts` | NFL team colours, with text chosen by WCAG contrast |
+| `PageHeader.tsx` | Back link, heading, subtitle |
+| `ChoiceList.tsx` | The league and team boxes |
+| `SelectionLink.tsx` | A real link to a league or team |
+| `RequestStatus.tsx`, `ErrorMessage.tsx` | Loading and error lines, with Try again |
+| `LineupView.tsx` | The summary card and the Starters / Bench / Injured Reserve tables |
+| `testHelpers.ts` | Shared test set-up (see Tests) |
+| `*.css` | `index.css` (colour tokens, reset, page column) and one file per component |
+
+## Deployment
+
+CI builds `dist/` after `terraform apply` and syncs it to the site bucket:
+`assets/` with `max-age=31536000, immutable`, everything else with `no-cache`.
+Then it invalidates `/*` on the CloudFront distribution. Terraform owns the
+bucket; CI owns its contents.

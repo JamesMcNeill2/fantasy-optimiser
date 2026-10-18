@@ -6,7 +6,7 @@ interface ErrorMessageProps {
   onRetry: () => void
 }
 
-// A failed request's message with a retry button. 3f refines the wording.
+// A failed request's message, with a Try again button when retrying could help.
 export function ErrorMessage({ error, onRetry }: ErrorMessageProps) {
   return (
     <p role="alert" className="error">

@@ -18,8 +18,8 @@ export function formatPoints(points: number): string {
   return points.toFixed(2)
 }
 
-// The gain as shown: a + for a real gain, eg +1.23,
-// and no sign when it rounds to zero, eg. 0.00.
+// The gain as shown: a + for a real gain (e.g. +1.23), and no sign when it
+// rounds to zero (0.00).
 export function gainLabel(gain: number): string {
   const rounded = Math.round(gain * 100) / 100
   if (rounded === 0) return formatPoints(0)
@@ -44,7 +44,7 @@ export function opponentOf(player: RosterPlayer): string | null {
 }
 
 // The game column. "BYE" comes from game_status, never from a missing
-// projection, which can mean other things (eg. an injured player)
+// projection, which can mean other things (e.g. an injured player).
 export function gameLabel(player: RosterPlayer): string {
   if (player.game_status === 'bye') return 'BYE'
   if (player.game_status === 'canceled') return 'Cancelled'
@@ -52,8 +52,7 @@ export function gameLabel(player: RosterPlayer): string {
   return opponent === null ? '-' : `v ${opponent}`
 }
 
-// The points column.
-// Locked players show points so far; everyone else their
+// The points column: locked players show points so far; everyone else their
 // projection, or "-" when there isn't one.
 export function pointsLabel(player: RosterPlayer): string {
   if (player.locked) return formatPoints(player.actual_points ?? 0)

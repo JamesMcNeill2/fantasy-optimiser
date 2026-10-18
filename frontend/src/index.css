@@ -6,7 +6,7 @@
 
 /* The page's centred column: the site header and main both sit in #root */
 #root {
-  max-width: 48rem;
+  max-width: 50rem;
   margin: 0 auto;
   padding: 0.75rem 1rem 2rem;
 }
@@ -54,12 +54,6 @@ body {
   margin: 0;
 }
 
-main {
-  max-width: 50rem;
-  margin: 0 auto;
-  padding: 0.75rem 1rem 2rem;
-}
-
 /* Condensed and heavy: the scoreboard type for names and scores */
 h1,
 h2,
@@ -80,7 +74,7 @@ h2 {
   font-size: 2.5rem;
 }
 
-/* Starters, Bench, Injured reserve */
+/* Starters, Bench, Injured Reserve */
 h3 {
   margin: 1.25rem 0 0.5rem;
   font-size: 1.5rem;

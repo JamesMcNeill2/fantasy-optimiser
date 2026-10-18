@@ -6,7 +6,7 @@ import type { Ref } from 'react'
 interface PageHeaderProps {
   title: string
   subtitle?: string
-  // The page one level up: its name, and how to get there
+  // The page one level up: its name, and where it is
   back?: { label: string; to: Selection }
   onNavigate: (next: Selection) => void
   // Lets the app move focus here after a navigation
