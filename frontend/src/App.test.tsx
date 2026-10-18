@@ -112,7 +112,7 @@ describe('App', () => {
     expect(window.location.search).toBe('?league=0')
   })
 
-  it('retries every failed request with one Try again', async () => {
+  it('retries every failed request with one Try Again', async () => {
     window.history.replaceState(null, '', '/?league=0&team=8')
     let serverUp = false
     // Like the Vite proxy while uvicorn is down: a 502 with no JSON detail

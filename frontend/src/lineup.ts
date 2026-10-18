@@ -116,7 +116,7 @@ export function slotLabel(slot: string): string {
 export function changeVerdict(changes: LineupChanges): string {
   const count = Math.max(changes.start.length, changes.bench.length)
   if (count === 0) return 'Your Lineup Is Optimal'
-  return count === 1 ? '1 change' : `${count} changes`
+  return count === 1 ? '1 Change' : `${count} Changes`
 }
 
 const POSITIONS = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF'])

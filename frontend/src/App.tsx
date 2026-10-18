@@ -107,7 +107,7 @@ function App() {
               <ChoiceList
                 choices={teamList.map((item) => ({ value: item.roster_id, label: item.team_name }))}
                 size="regular"
-                linkTo={(rosterId) => ({ league: league.key, team: rosterId })}
+                linkTo={(id) => ({ league: league.key, team: id })}
                 onNavigate={choose}
               />
             )}

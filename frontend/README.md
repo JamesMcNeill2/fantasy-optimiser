@@ -115,7 +115,7 @@ All in `src/`:
 | `PageHeader.tsx`                        | Back link, heading, subtitle                                                  |
 | `ChoiceList.tsx`                        | The league and team boxes                                                     |
 | `SelectionLink.tsx`                     | A real link to a league or team                                               |
-| `RequestStatus.tsx`, `ErrorMessage.tsx` | Loading and error lines, with Try again                                       |
+| `RequestStatus.tsx`, `ErrorMessage.tsx` | Loading and error lines, with Try Again                                       |
 | `LineupView.tsx`                        | The summary card and the Starters / Bench / Injured Reserve tables            |
 | `testHelpers.ts`                        | Shared test set-up (see Tests)                                                |
 | `*.css`                                 | `index.css` (colour tokens, reset, page column) and one file per component    |

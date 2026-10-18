@@ -82,8 +82,8 @@ export function LineupView({ roster }: LineupViewProps) {
             )}
             {anyLocked && (
               <p className="summary-note">
-                Totals use live or final points for locked players. Sleeper's projections used for
-                players yet to start.
+                Totals use live or final points for locked players. Sleeper's projections are used
+                for players yet to start.
               </p>
             )}
           </div>

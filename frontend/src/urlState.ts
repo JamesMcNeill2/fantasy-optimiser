@@ -31,8 +31,8 @@ export function selectionUrl(selection: Selection): string {
   return query === '' ? window.location.pathname : `?${query}`
 }
 
-// The current selection, and a function that changes it. Each change adds a
-// history entry; Back and Forward restore earlier ones.
+// The current selection, and a function that changes it. Each new choice adds a
+// history entry; choosing the page already shown doesn’t.
 export function useSelection(): [Selection, (next: Selection) => void] {
   const [selection, setSelection] = useState(readSelection)
 
@@ -50,6 +50,7 @@ export function useSelection(): [Selection, (next: Selection) => void] {
     }
     window.scrollTo(0, 0)
   }
+
   return [selection, choose]
 }
 
