@@ -78,6 +78,7 @@ class WeekGame(NamedTuple):
     opponent: str
     status: str
 
+
 class ResponseModel(BaseModel):
     """Base for the response models.
 
@@ -85,7 +86,9 @@ class ResponseModel(BaseModel):
     schema marks them all required. Without this, `starter_slot: int | None
     = None` would generate as optional in the frontend's TypeScript.
     """
+
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
 
 class League(ResponseModel):
     """A Sleeper league summary returned by the API.
