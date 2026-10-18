@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 import type { RosterPlayer, RosterResponse } from './api'
 import {
   changeVerdict,
@@ -65,7 +65,7 @@ export function LineupView({ roster }: LineupViewProps) {
         {(hasChanges || needsPickup.size > 0 || anyLocked) && (
           <div className="summary-body">
             {hasChanges && (
-              <ul className="moves">
+              <ul role="list" className="moves">
                 {changes.start.map((id) => (
                   <MoveRow key={id} action="start" player={byId.get(id)} />
                 ))}
@@ -89,8 +89,7 @@ export function LineupView({ roster }: LineupViewProps) {
         )}
       </section>
 
-      <h3>Starters</h3>
-      <PlayerTable>
+      <PlayerTable title="Starters">
         {lineup.starter_ids.map((id, slot) => (
           <PlayerRow
             key={slot}
@@ -102,8 +101,7 @@ export function LineupView({ roster }: LineupViewProps) {
         ))}
         </PlayerTable>
 
-        <h3>Bench</h3>
-        <PlayerTable>
+        <PlayerTable title="Bench">
           {lineup.bench_ids.map((id) => (
             <PlayerRow
               key={id}
@@ -115,14 +113,11 @@ export function LineupView({ roster }: LineupViewProps) {
         </PlayerTable>
 
         {reserve.length > 0 && (
-        <>
-          <h3>Injured Reserve</h3>
-          <PlayerTable>
+          <PlayerTable title="Injured Reserve">
             {reserve.map((player) => (
               <PlayerRow key={player.player_id} slot="IR" player={player} />
             ))}
           </PlayerTable>
-        </>
       )}
     </>
   )
@@ -182,24 +177,30 @@ function GameCell({ player }: { player: RosterPlayer }) {
   )
 }
 
-// A table with the column headings every player list shares.
-function PlayerTable({ children }: { children: ReactNode}) {
+// A titled table with the column headings every player list shares. The
+// heading also names the table, so a screen reader's table list says
+// "Starters" rather than just "table".
+function PlayerTable({ title, children }: { title: string; children: ReactNode}) {
+  const headingId = useId()
   return (
-    <div className="table-wrap">
-      <table className="players">
-        <thead>
-          <tr>
-            <th scope="col">Slot</th>
-            <th scope="col">Player</th>
-            <th scope="col">Game</th>
-            <th scope="col" className="points">
-              Points
-            </th>
-          </tr>
-        </thead>
+    <>
+      <h3 id={headingId}>{title}</h3>
+      <div className="table-wrap">
+        <table className="players" aria-labelledby={headingId}>
+          <thead>
+            <tr>
+              <th scope="col">Slot</th>
+              <th scope="col">Player</th>
+              <th scope="col">Game</th>
+              <th scope="col" className="points">
+                Points
+              </th>
+            </tr>
+          </thead>
         <tbody>{children}</tbody>
       </table>
     </div>
+  </>
   )
 }
 

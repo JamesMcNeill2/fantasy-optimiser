@@ -229,8 +229,7 @@
   color: var(--muted);
 }
 
-.players tr:is(.is-locked, .is-bye) .slot-chip
-.players tr:is(.is-locked, .is-bye) .team-label {
+.players tr:is(.is-locked, .is-bye) :is(.slot-chip, .team-label) {
   filter: grayscale(1);
   opacity: 0.7;
 }

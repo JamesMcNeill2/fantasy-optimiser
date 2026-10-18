@@ -21,7 +21,7 @@ function readSelection(): Selection {
   return { league, team: league === null ? null : readNumber(params, 'team')}
 }
 
-function selectionUrl(selection: Selection): string {
+export function selectionUrl(selection: Selection): string {
   const params = new URLSearchParams()
   if (selection.league !== null) {
     params.set('league', String(selection.league))
@@ -49,4 +49,16 @@ export function useSelection(): [Selection, (next: Selection) => void] {
   }
 
   return [selection, choose]
+}
+
+// The id to use for a choice: the URL's, until the loaded list proves it
+// stale. While the list is still loading the id is trusted, so requests that
+// depend on it can start straight away.
+export function trustedId<T>(
+  id: number | null,
+  list: T[] | undefined,
+  idOf: (item: T) => number,
+): number | null {
+  if (id === null || list === undefined) return id
+  return list.some((item) => idOf(item) === id) ? id : null
 }

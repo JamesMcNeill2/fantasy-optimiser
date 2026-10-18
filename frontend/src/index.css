@@ -1,3 +1,16 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* The page's centred column: the site header and main both sit in #root */
+#root {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 0.75rem 1rem 2rem;
+}
+
 /* Matchday slate. light-dark() picks the first value in light mode and the
    second in dark, following the visitor's system setting. */
 :root {
@@ -42,7 +55,7 @@ body {
 }
 
 main {
-  max-width: 48rem;
+  max-width: 50rem;
   margin: 0 auto;
   padding: 0.75rem 1rem 2rem;
 }
@@ -103,9 +116,15 @@ button:hover {
 }
 
 /* A clear outline for keyboard users, without one on every mouse click */
-button:focus-visible {
+:is(button, a):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* Headings take focus after a navigation (tabIndex -1), but they aren't
+   controls, so no focus ring */
+[tabindex='-1']:focus {
+  outline: none;
 }
 
 .error {
