@@ -32,7 +32,7 @@ export function selectionUrl(selection: Selection): string {
 }
 
 // The current selection, and a function that changes it. Each new choice adds a
-// history entry; choosing the page already shown doesn’t.
+// history entry; choosing the page already shown doesn't.
 export function useSelection(): [Selection, (next: Selection) => void] {
   const [selection, setSelection] = useState(readSelection)
 

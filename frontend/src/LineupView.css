@@ -33,7 +33,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* "+6.37 with 1 change" across the card: mint for a gain, grey otherwise */
+/* "+6.37 with 1 Change" across the card: mint for a gain, grey otherwise */
 .gain-strip {
   padding: 0.5rem 1.25rem;
   background: var(--locked-bg);
