@@ -1,0 +1,98 @@
+.choices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.choice {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.choice:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+}
+
+/* A press shrinks the box slightly, so a tap visibly registers */
+.choice:active {
+  transform: scale(0.98);
+}
+
+.choices-large,
+.choices-regular {
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+}
+
+.choices-regular .choice {
+  padding: 0.625rem 1rem;
+}
+
+.choice-label {
+  font-weight: 600;
+}
+
+/* Leagues: the same boxes as teams, scaled up */
+.choices-large .choice {
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.choices-large .choice-label {
+  font-size: 1.25rem;
+}
+
+.choices-large .badge {
+  width: 3.25rem;
+  height: 3.25rem;
+  font-size: 1.25rem;
+}
+
+.badge {
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--chip-text);
+  font-stretch: 75%;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.badge-0 {
+  background: #4aa8f0;
+}
+.badge-1 {
+  background: #2cc2a6;
+}
+.badge-2 {
+  background: #a57ef0;
+}
+.badge-3 {
+  background: #f29a4a;
+}
+.badge-4 {
+  background: #f0607f;
+}
+.badge-5 {
+  background: #c08a68;
+}
+.badge-6 {
+  background: #e3c14f;
+}
+.badge-7 {
+  background: #7f9cf5;
+}

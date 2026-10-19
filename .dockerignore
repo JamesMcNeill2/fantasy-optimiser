@@ -27,3 +27,7 @@ htmlcov
 .vscode
 .idea
 Thumbs.db
+
+# Frontend (Node): neither image needs it, and both build from the repo root,
+# so node_modules would otherwise go into the build context
+frontend/

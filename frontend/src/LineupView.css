@@ -1,0 +1,315 @@
+/* The summary card: the two scores, a gain strip, then the changes.
+   overflow: hidden clips the strip's background to the rounded corners. */
+.summary {
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+.summary p {
+  margin: 0;
+}
+
+/* Current and optimal side by side, with a rule between them */
+.scores {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 0.875rem 1.25rem 0.75rem;
+}
+
+.score + .score {
+  padding-left: 1.25rem;
+  border-left: 1px solid var(--border);
+}
+
+.score-label {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.score-value {
+  font-size: 2.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* "+6.37 with 1 Change" across the card: mint for a gain, grey otherwise */
+.gain-strip {
+  padding: 0.5rem 1.25rem;
+  background: var(--locked-bg);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.gain-strip.is-gain {
+  background: var(--start-bg);
+  color: var(--start-text);
+}
+
+.gain-value {
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-body {
+  padding: 0.25rem 1.25rem 0.75rem;
+}
+
+.moves {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* The strip already separates the first change from the scores */
+.move:first-child {
+  border-top: none;
+}
+
+/* Action, player and points in three columns */
+.move {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.move-action {
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.move-start {
+  color: var(--start-text);
+}
+
+.move-bench {
+  color: var(--sit-text);
+}
+
+.move-points {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary .summary-note {
+  margin-top: 0.5rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.summary-warning {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--pickup-bg);
+  color: var(--pickup-text);
+}
+
+/* Lets a table scroll sideways inside its box on a narrow screen,
+   instead of making the whole page scroll */
+.table-wrap {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+.players {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+/* Every cell is centred vertically, so the game and points line up with the
+   middle of the name-and-details block */
+.players th,
+.players td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border);
+}
+
+.players tr:last-child th,
+.players tr:last-child td {
+  border-bottom: none;
+}
+
+.players thead th {
+  padding-block: 0.5rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+/* The slot cell is a frame for the chip inside it */
+.players .slot-cell {
+  position: relative;
+  width: 4rem;
+  padding: 0;
+}
+
+/* The slot chip fills the cell, less a small inset, whatever the row's
+   height: absolute positioning stretches it to the cell's edges */
+.slot-chip {
+  position: absolute;
+  inset: 0.5rem 0.625rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.25rem;
+  background: var(--pos-fill);
+  color: var(--chip-text);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-stretch: 85%;
+}
+
+/* The player's name and points: the most important text in each row */
+.player-name,
+.players td.points {
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+/* Position and NFL team, under the player's name */
+.player-details {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.125rem;
+  font-size: 0.8125rem;
+}
+
+/* In the summary, the name and details stack in the middle column */
+.move-name {
+  display: grid;
+}
+
+.pos-text {
+  color: var(--pos-ink);
+  font-weight: 700;
+}
+
+.team-label {
+  padding: 0 0.35rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.game {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.players .points {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Players who can't help this week: the whole row is shaded and greyed.
+   Locked is grey; a bye is a muted violet. */
+.players tr.is-locked {
+  background: var(--locked-row);
+}
+
+.players tr.is-bye {
+  background: var(--bye-row);
+}
+
+.players tr:is(.is-locked, .is-bye) td,
+.players tr:is(.is-locked, .is-bye) .player-name,
+.players tr:is(.is-locked, .is-bye) .pos-text {
+  color: var(--muted);
+}
+
+.players tr:is(.is-locked, .is-bye) :is(.slot-chip, .team-label) {
+  filter: grayscale(1);
+  opacity: 0.7;
+}
+
+/* After the shading above, so a slot that needs a pickup always shows it */
+.players tr.needs-pickup {
+  background: var(--pickup-bg);
+}
+
+/* Colour classes set --pos-fill (a background) and --pos-ink (the same colour
+   as text, darker in light mode so it stays readable) */
+.pos-qb {
+  --pos-fill: var(--pos-qb);
+  --pos-ink: light-dark(#c0284c, var(--pos-qb));
+}
+.pos-rb {
+  --pos-fill: var(--pos-rb);
+  --pos-ink: light-dark(#0f7d69, var(--pos-rb));
+}
+.pos-wr {
+  --pos-fill: var(--pos-wr);
+  --pos-ink: light-dark(#1a6fb5, var(--pos-wr));
+}
+.pos-te {
+  --pos-fill: var(--pos-te);
+  --pos-ink: light-dark(#b45a12, var(--pos-te));
+}
+.pos-k {
+  --pos-fill: var(--pos-k);
+  --pos-ink: light-dark(#6d43c9, var(--pos-k));
+}
+.pos-def {
+  --pos-fill: var(--pos-def);
+  --pos-ink: light-dark(#8a5534, var(--pos-def));
+}
+.pos-other,
+.slot-flex {
+  --pos-fill: var(--pos-other);
+  --pos-ink: var(--muted);
+}
+
+.slot-chip.slot-bn {
+  background: var(--locked-bg);
+  color: var(--muted);
+}
+
+.slot-chip.slot-ir {
+  background: var(--sit-bg);
+  color: var(--sit-text);
+}
+
+/* Small labels after names: Start, Bench, Locked, Needs Pickup */
+.tag {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+  vertical-align: 0.125rem;
+}
+
+.tag-start {
+  background: var(--start-bg);
+  color: var(--start-text);
+}
+
+.tag-sit {
+  background: var(--sit-bg);
+  color: var(--sit-text);
+}
+
+.tag-locked {
+  background: var(--locked-bg);
+  color: var(--muted);
+}
+
+.tag-pickup {
+  background: var(--pickup-bg);
+  color: var(--pickup-text);
+}

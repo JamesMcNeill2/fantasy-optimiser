@@ -11,7 +11,7 @@ import httpx
 from boto3.dynamodb.conditions import Key
 from fastapi import APIRouter, Depends, FastAPI, HTTPException
 from mangum import Mangum
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from shared.config import Config, load_config
 from shared.logs import configure_logging
 from shared.optimiser import (
@@ -79,7 +79,18 @@ class WeekGame(NamedTuple):
     status: str
 
 
-class League(BaseModel):
+class ResponseModel(BaseModel):
+    """Base for the response models.
+
+    The api always sends every field, defaults included, so the OpenAPI
+    schema marks them all required. Without this, `starter_slot: int | None
+    = None` would generate as optional in the frontend's TypeScript.
+    """
+
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+
+class League(ResponseModel):
     """A Sleeper league summary returned by the API.
 
     Attributes:
@@ -91,7 +102,7 @@ class League(BaseModel):
     name: str
 
 
-class Team(BaseModel):
+class Team(ResponseModel):
     """A team summary within a league.
 
     Attributes:
@@ -103,7 +114,7 @@ class Team(BaseModel):
     team_name: str
 
 
-class RosterPlayer(BaseModel):
+class RosterPlayer(ResponseModel):
     """A single player entry from a roster response.
 
     Attributes:
@@ -137,7 +148,7 @@ class RosterPlayer(BaseModel):
     actual_points: float | None = None
 
 
-class OptimalLineup(BaseModel):
+class OptimalLineup(ResponseModel):
     """The optimal lineup for a roster, with its points totals.
 
     Both totals count locked players' actual points and everyone else's
@@ -158,7 +169,7 @@ class OptimalLineup(BaseModel):
     current_total: float
 
 
-class RosterResponse(BaseModel):
+class RosterResponse(ResponseModel):
     """A roster response containing all players for a team.
 
     Attributes:
