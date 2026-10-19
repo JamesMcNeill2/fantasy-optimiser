@@ -18,7 +18,7 @@ running locally:
 uv run --env-file ..\..\.env uvicorn app.main:app --reload
 
 # terminal 2, from frontend
-npm install
+npm ci
 npm run dev        # http://localhost:5173
 ```
 
@@ -122,7 +122,8 @@ All in `src/`:
 
 ## Deployment
 
-CI builds `dist/` after `terraform apply` and syncs it to the site bucket:
-`assets/` with `max-age=31536000, immutable`, everything else with `no-cache`.
-Then it invalidates `/*` on the CloudFront distribution. Terraform owns the
-bucket; CI owns its contents.
+CI checks and builds the app in its own job, with no AWS access, and passes
+`dist/` to the deploy job as an artifact. After `terraform apply`, the deploy
+job syncs it to the site bucket: `assets/` with `max-age=31536000, immutable`,
+everything else with `no-cache`. Then it invalidates `/*` on the CloudFront
+distribution. Terraform owns the bucket; CI owns its contents.
