@@ -25,6 +25,14 @@ USERS_PATH = "/league/{league_id}/users"
 AVATAR_MAX_BYTES = 1_000_000
 AVATAR_CACHE_CONTROL = "public, max-age=31536000, immutable"
 
+# The first bytes of each image format the batch stores. Sleeper's CDN sends
+# the wrong Content-Type (image/png for JPEG files), so the type comes from
+# the file itself, not the response header.
+IMAGE_SIGNATURES = {
+    b"\xff\xd8\xff": "image/jpeg",
+    b"\x89PNG\r\n\x1a\n": "image/png",
+}
+
 logger = logging.getLogger(__name__)
 
 
@@ -138,6 +146,22 @@ def avatar_exits(s3: S3Client, bucket: str, key: str) -> bool:
     return True
 
 
+def image_type(body: bytes) -> str | None:
+    """
+    Identify a JPEG or PNG image from its first bytes.
+
+    Args:
+        body: The downloaded file.
+
+    Returns:
+        str | None: "image/jpeg" or "image/png", or None for anything else.
+    """
+    for signature, content_type in IMAGE_SIGNATURES.items():
+        if body.startswith(signature):
+            return content_type
+    return None
+
+
 def copy_avatars(
     s3: S3Client, client: httpx.Client, bucket: str, urls: Iterable[object]
 ) -> dict[str, int]:
@@ -145,8 +169,8 @@ def copy_avatars(
     Copy Sleeper avatar uploads into the bucket, skipping ones already stored.
 
     A new avatar always has a new file name, so a stored file never needs
-    replacing. Each failure is logged as a warning and counted; it doesn't
-    stop the rest.
+    replacing. Each file is stored with the type of image it actually contains.
+    Each failure is logged as a warning and counted; it doesn't stop the rest.
 
     Args:
         s3: S3 client.
@@ -169,16 +193,17 @@ def copy_avatars(
                 continue
             response = client.get(AVATAR_URL_PREFIX + name)
             response.raise_for_status()
-            content_type = response.headers.get("content-type", "")
-            if content_type.split(";")[0].strip() != "image/jpeg":
-                raise ValueError(f"Unexpected content type {content_type!r}")
-            if len(response.content) > AVATAR_MAX_BYTES:
-                raise ValueError(f"{len(response.content)} bytes is over the limit")
+            content = response.content
+            if len(content) > AVATAR_MAX_BYTES:
+                raise ValueError(f"{len(content)} bytes is over the limit")
+            content_type = image_type(content)
+            if content_type is None:
+                raise ValueError("Not a JPEG or PNG image")
             s3.put_object(
                 Bucket=bucket,
                 Key=key,
-                Body=response.content,
-                ContentType="image/jpeg",
+                Body=content,
+                ContentType=content_type,
                 CacheControl=AVATAR_CACHE_CONTROL,
             )
             counts["copied"] += 1
@@ -279,6 +304,7 @@ def handler(event, context):
                     league_id,
                     time.perf_counter() - users_start,
                 )
+
         avatars_start = time.perf_counter()
         try:
             bucket = os.environ.get("AVATARS_BUCKET", "").strip()

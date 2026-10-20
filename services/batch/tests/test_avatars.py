@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 BUCKET = "test-bucket"
 BASE = "https://sleepercdn.com/uploads/"
 JPEG = b"\xff\xd8\xff fake jpeg"
+PNG = b"\x89PNG\r\n\x1a\n fake png"
 NOTHING = {"copied": 0, "existing": 0, "failed": 0}
 
 
@@ -41,8 +42,8 @@ class FakeS3:
         return {}
 
 
-def jpeg(body: bytes = JPEG) -> httpx.Response:
-    return httpx.Response(200, content=body, headers={"content-type": "image/jpeg"})
+def image(body: bytes = JPEG, content_type: str = "image/jpeg") -> httpx.Response:
+    return httpx.Response(200, content=body, headers={"content-type": content_type})
 
 
 def run(
@@ -69,7 +70,7 @@ def run(
 def test_copy_avatars_uploads_a_new_avatar():
     s3 = FakeS3()
 
-    counts, requests = run(s3, {"12345.jpg": jpeg()}, [BASE + "12345.jpg"])
+    counts, requests = run(s3, {"12345.jpg": image()}, [BASE + "12345.jpg"])
 
     assert counts == {"copied": 1, "existing": 0, "failed": 0}
     assert [str(request.url) for request in requests] == [BASE + "12345.jpg"]
@@ -97,7 +98,7 @@ def test_copy_avatars_skips_stored_avatars():
 def test_copy_avatars_copies_a_shared_avatar_once():
     s3 = FakeS3()
 
-    counts, requests = run(s3, {"12345.jpg": jpeg()}, [BASE + "12345.jpg"] * 2)
+    counts, requests = run(s3, {"12345.jpg": image()}, [BASE + "12345.jpg"] * 2)
 
     assert counts == {"copied": 1, "existing": 0, "failed": 0}
     assert len(requests) == 1
@@ -116,7 +117,7 @@ def test_copy_avatars_ignores_values_that_are_not_sleeper_uploads():
 
 def test_copy_avatars_carries_on_after_a_failed_download():
     s3 = FakeS3()
-    responses = {"aaaa.jpg": httpx.Response(404), "bbbb.jpg": jpeg()}
+    responses = {"aaaa.jpg": httpx.Response(404), "bbbb.jpg": image()}
 
     counts, _ = run(s3, responses, [BASE + "aaaa.jpg", BASE + "bbbb.jpg"])
 
@@ -124,19 +125,19 @@ def test_copy_avatars_carries_on_after_a_failed_download():
     assert [put["Key"] for put in s3.puts] == ["avatars/bbbb.jpg"]
 
 
-def test_copy_avatars_rejects_a_non_jpeg():
-    s3 = FakeS3()
-    html = httpx.Response(200, content=b"<html>", headers={"content-type": "text/html"})
+def test_copy_avatars_treats_access_denied_as_a_failure():
+    s3 = FakeS3(head_error_code="403")
 
-    counts, _ = run(s3, {"12345.jpg": html}, [BASE + "12345.jpg"])
+    counts, requests = run(s3, {"12345.jpg": image()}, [BASE + "12345.jpg"])
 
     assert counts == {"copied": 0, "existing": 0, "failed": 1}
+    assert requests == []
     assert s3.puts == []
 
 
 def test_copy_avatars_rejects_an_oversized_file():
     s3 = FakeS3()
-    too_big = jpeg(b"\xff" * (AVATAR_MAX_BYTES + 1))
+    too_big = image(JPEG + b"\x00" * AVATAR_MAX_BYTES)
 
     counts, _ = run(s3, {"12345.jpg": too_big}, [BASE + "12345.jpg"])
 
@@ -144,11 +145,23 @@ def test_copy_avatars_rejects_an_oversized_file():
     assert s3.puts == []
 
 
-def test_copy_avatars_treats_access_denied_as_a_failure():
-    s3 = FakeS3(head_error_code="403")
+def test_copy_avatars_stores_a_png_as_png():
+    s3 = FakeS3()
+    png = image(PNG, content_type="image/jpeg")
 
-    counts, requests = run(s3, {"12345.jpg": jpeg()}, [BASE + "12345.jpg"])
+    counts, _ = run(s3, {"12345.jpg": png}, [BASE + "12345.jpg"])
+
+    assert counts == {"copied": 1, "existing": 0, "failed": 0}
+    assert [(put["Key"], put["ContentType"]) for put in s3.puts] == [
+        ("avatars/12345.jpg", "image/png")
+    ]
+
+
+def test_copy_avatars_rejects_content_that_is_not_an_image():
+    s3 = FakeS3()
+    html = image(b"<html>", content_type="image/png")
+
+    counts, _ = run(s3, {"12345.jpg": html}, [BASE + "12345.jpg"])
 
     assert counts == {"copied": 0, "existing": 0, "failed": 1}
-    assert requests == []
     assert s3.puts == []
