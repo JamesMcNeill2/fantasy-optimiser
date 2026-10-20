@@ -37,6 +37,7 @@ module "batch" {
   users_table_name   = module.data_store.users_table_name
   users_table_arn    = module.data_store.users_table_arn
   league_ids         = var.league_ids
+  avatars_bucket     = module.frontend.bucket_name
 
   schedule_state = startswith(terraform.workspace, "feature-") ? "DISABLED" : "ENABLED"
 }

@@ -77,3 +77,8 @@ variable "league_ids" {
   type        = list(string)
   sensitive   = true
 }
+
+variable "avatars_bucket" {
+  description = "Name of the site bucket the batch copies team avatars into, under avatars/ (served by CloudFront at /avatars/)"
+  type        = string
+}

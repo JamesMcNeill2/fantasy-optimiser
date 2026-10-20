@@ -2,7 +2,7 @@ name: Terraform Deploy
 
 on:
   push:
-    branches: [main, dev, 'feature/**']
+    branches: [main, dev, "feature/**"]
 
 permissions:
   id-token: write
@@ -216,6 +216,6 @@ jobs:
           aws s3 sync ../../frontend/dist/assets "s3://$BUCKET/assets" \
             --cache-control "public, max-age=31536000, immutable" --delete --no-progress
           aws s3 sync ../../frontend/dist "s3://$BUCKET" \
-            --exclude "assets/*" --cache-control "no-cache" --delete --no-progress
+            --exclude "assets/*" --exclude "avatars/*" --cache-control "no-cache" --delete --no-progress
           aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*" \
             --query 'Invalidation.[Id,Status]' --output text
