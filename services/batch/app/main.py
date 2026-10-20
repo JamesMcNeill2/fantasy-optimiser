@@ -44,6 +44,7 @@ def player_items(raw: dict, refreshed_at: str) -> list[dict]:
                 "player_id": player_id,
                 "first_name": player_data.get("first_name"),
                 "last_name": player_data.get("last_name"),
+                "shirt_number": player_data.get("number"),
                 "position": position,
                 "team": player_data.get("team"),
                 "injury_status": player_data.get("injury_status"),
@@ -75,6 +76,7 @@ def user_items(raw: list, league_id: str, refreshed_at: str) -> list[dict]:
             "user_id": user_data.get("user_id"),
             "display_name": user_data.get("display_name"),
             "team_name": team_name,
+            "avatar": metadata.get("avatar"),
             "refreshed_at": refreshed_at,
         }
         users_trimmed.append(user)
