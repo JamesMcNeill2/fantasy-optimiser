@@ -13,11 +13,13 @@ const LEAGUES: League[] = [
 ]
 
 const TEAMS: Team[] = [
-  { roster_id: 3, team_name: 'Bills Bills Bills' },
-  { roster_id: 8, team_name: 'Big boys' },
+  { roster_id: 3, team_name: 'Bills Bills Bills', avatar: null },
+  { roster_id: 8, team_name: 'Big boys', avatar: null },
 ]
 
 const ROSTER: RosterResponse = {
+  league_name: 'No Punt Intended',
+  team_name: 'Big boys',
   players: [
     {
       player_id: '1',
@@ -25,6 +27,7 @@ const ROSTER: RosterResponse = {
       reserve: false,
       first_name: 'Sam',
       last_name: 'Starter',
+      shirt_number: 17,
       position: 'QB',
       team: 'BUF',
       injury_status: null,

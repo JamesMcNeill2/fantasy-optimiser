@@ -98,6 +98,7 @@ export interface paths {
          *     runs the lineup optimiser. Locked players keep their slots.
          *
          *     Args:
+         *         league_key: The zero-based index of the league.
          *         league_id: The Sleeper league identifier.
          *         roster_id: The roster identifier to fetch.
          *         client: The HTTP client used to query Sleeper.
@@ -105,8 +106,8 @@ export interface paths {
          *         tables: The configured DynamoDB tables.
          *
          *     Returns:
-         *         RosterResponse: The team's players, the league's starting slot types and
-         *             the optimal lineup with its totals.
+         *         RosterResponse: The league and team names, the team’s players, the league’s
+         *         starting slot types and the optimal lineup with its totals.
          *
          *     Raises:
          *         HTTPException: A 404 if the team is not in the league.
@@ -181,6 +182,7 @@ export interface components {
          *         reserve: Whether the player is in the reserve list.
          *         first_name: The player's first name when available.
          *         last_name: The player's last name when available.
+         *         shirt_number: The player's shirt number when available.
          *         position: The player's position.
          *         team: The player's team abbreviation.
          *         injury_status: The player's injury status.
@@ -201,6 +203,8 @@ export interface components {
             first_name: string | null;
             /** Last Name */
             last_name: string | null;
+            /** Shirt Number */
+            shirt_number: number | null;
             /** Position */
             position: string | null;
             /** Team */
@@ -233,6 +237,10 @@ export interface components {
          *         lineup: The optimal lineup evaluation for the roster.
          */
         RosterResponse: {
+            /** League Name */
+            league_name: string;
+            /** Team Name */
+            team_name: string;
             /** Players */
             players: components["schemas"]["RosterPlayer"][];
             /** Season */
@@ -256,6 +264,8 @@ export interface components {
             roster_id: number;
             /** Team Name */
             team_name: string;
+            /** Avatar */
+            avatar: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -357,8 +367,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                roster_id: number;
                 league_key: number;
+                roster_id: number;
             };
             cookie?: never;
         };

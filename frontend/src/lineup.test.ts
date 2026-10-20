@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { OptimalLineup, RosterPlayer } from './api'
+import type { OptimalLineup, RosterPlayer, RosterResponse } from './api'
 import {
   gameLabel,
   lineupChanges,
@@ -27,6 +27,7 @@ function player(overrides: Partial<RosterPlayer> = {}): RosterPlayer {
     reserve: false,
     first_name: 'Test',
     last_name: 'Player',
+    shirt_number: null,
     position: 'WR',
     team: 'KC',
     injury_status: null,
@@ -249,11 +250,18 @@ describe('slotClass', () => {
 
 describe('weekLabel', () => {
   it('shows the week', () => {
-    const roster = { players: [player()], season: '2026', week: 6, slots: [], lineup: lineup([]) }
+    const roster: RosterResponse = {
+      league_name: 'Test League',
+      team_name: 'Test Team',
+      players: [player()],
+      season: '2026',
+      week: 6,
+      slots: [],
+      lineup: lineup([]),
+    }
     expect(weekLabel(roster)).toBe('Week 6')
   })
 })
-
 describe('opponentOf', () => {
   it('gives the opponent for a game still to play', () => {
     expect(opponentOf(player({ opponent: 'LV' }))).toBe('LV')
