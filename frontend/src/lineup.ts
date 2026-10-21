@@ -43,7 +43,7 @@ export function opponentOf(player: RosterPlayer): string | null {
   return player.opponent
 }
 
-// The game column. "BYE" comes from game_status, never from a missing
+// The fixture column. "BYE" comes from game_status, never from a missing
 // projection, which can mean other things (e.g. an injured player).
 export function gameLabel(player: RosterPlayer): string {
   if (player.game_status === 'bye') return 'BYE'

@@ -113,14 +113,24 @@ describe('LineupView: locked players', () => {
 })
 
 describe('LineupView: byes', () => {
-  it('shows a bye as a violet label in the Game column', () => {
+  it('shows a bye as a violet label in the Fixture column', () => {
     render(<LineupView roster={ROSTER} />)
 
     const label = within(rowOf('Bo Byeweek')).getByText('BYE')
-    // Slot, Player, Game, Points: the Game cell is the third
+    // Slot, Player, Fixture, Points: the Fixture cell is the third
     expect(rowOf('Bo Byeweek').cells[2].contains(label)).toBe(true)
     expect(label.classList.contains('bye-label')).toBe(true)
     // Not a team-label: bye rows grey those out, and this one stays violet
     expect(label.classList.contains('team-label')).toBe(false)
+  })
+})
+
+describe('LineupView: columns', () => {
+  it('heads the opponent column Fixture in every table', () => {
+    render(<LineupView roster={ROSTER} />)
+
+    // Starters and Bench (no one is on injured reserve)
+    expect(screen.getAllByRole('columnheader', { name: 'Fixture' })).toHaveLength(2)
+    expect(screen.queryByRole('columnheader', { name: 'Game' })).toBeNull()
   })
 })

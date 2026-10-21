@@ -179,8 +179,8 @@ function TeamLabel({ team }: { team: string }) {
   )
 }
 
-// The game column: the opponent in their team's colour, BYE as a violet label
-// to match the row, or Cancelled or "-".
+// The fixture column: the opponent in their team's colour, BYE as a violet
+// label to match the row, or Cancelled or "-".
 function GameCell({ player }: { player: RosterPlayer }) {
   if (player.game_status === 'bye') return <span className="bye-label">{gameLabel(player)}</span>
   const opponent = opponentOf(player)
@@ -206,7 +206,7 @@ function PlayerTable({ title, children }: { title: string; children: ReactNode }
             <tr>
               <th scope="col">Slot</th>
               <th scope="col">Player</th>
-              <th scope="col">Game</th>
+              <th scope="col">Fixture</th>
               <th scope="col" className="points">
                 Points
               </th>
