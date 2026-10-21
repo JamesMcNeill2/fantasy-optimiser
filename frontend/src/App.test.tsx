@@ -115,6 +115,51 @@ describe('App', () => {
     expect(window.location.search).toBe('?league=0')
   })
 
+  it('shows the lineup and its header from the roster alone, before either list arrives', async () => {
+    window.history.replaceState(null, '', '/?league=0&team=8')
+    const leagues = deferred<Response>()
+    const teams = deferred<Response>()
+    stubFetch(
+      api({
+        '/api/leagues': () => leagues.promise,
+        '/api/leagues/0/teams': () => teams.promise,
+      }),
+    )
+    render(<App />)
+
+    // The names come from the roster response: neither list has answered
+    await screen.findByRole('heading', { name: 'Big boys' })
+    expect(screen.getByRole('link', { name: 'Back to No Punt Intended' })).toBeTruthy()
+    expect(document.title).toBe("Big boys · Mac's Fantasy Lineup Optimiser")
+    expect(screen.getByText('Sam Starter')).toBeTruthy()
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('keeps showing the lineup when a list fails', async () => {
+    window.history.replaceState(null, '', '/?league=0&team=8')
+    stubFetch(api({ '/api/leagues': () => json({ detail: 'Sleeper request failed' }, 502) }))
+    render(<App />)
+
+    await screen.findByRole('heading', { name: 'Big boys' })
+    await settle()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByText('Sam Starter')).toBeTruthy()
+  })
+
+  it('moves focus to the lineup heading once the roster arrives', async () => {
+    window.history.replaceState(null, '', '/?league=0')
+    const roster = deferred<Response>()
+    stubFetch(api({ '/api/leagues/0/teams/8/roster': () => roster.promise }))
+    render(<App />)
+
+    fireEvent.click(await screen.findByRole('link', { name: 'Big boys' }))
+    expect(screen.getByRole('status').textContent).toBe('Loading lineup…')
+
+    roster.resolve(json(ROSTER))
+    const heading = await screen.findByRole('heading', { name: 'Big boys' })
+    expect(document.activeElement).toBe(heading)
+  })
+
   it('retries every failed request with one Try Again', async () => {
     window.history.replaceState(null, '', '/?league=0&team=8')
     let serverUp = false
