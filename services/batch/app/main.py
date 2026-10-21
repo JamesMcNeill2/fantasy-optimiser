@@ -244,7 +244,7 @@ def handler(event, context):
     # Determine time for refreshed_at
     refreshed_at = datetime.datetime.now(datetime.UTC).isoformat()
 
-    summary = {"players": None, "users": {}, "avatars": None}
+    summary = {"players": None, "users": {}, "avatar": None}
     failures = []
     avatar_urls: list[str | None] = []
 
@@ -320,7 +320,7 @@ def handler(event, context):
                 time.perf_counter() - avatars_start,
             )
         except Exception:
-            failures.append("avatars")
+            failures.append("avatar")
             logger.exception(
                 "Avatar copy failed after %.2fs", time.perf_counter() - avatars_start
             )

@@ -277,8 +277,8 @@ function PlayerRow({ slot, player, change, needsPickup = false }: PlayerRowProps
       <SlotCell slot={slot} />
       <td>
         <span className="player-name">{playerName(player)}</span>
+        {player.locked && <LockIcon />}
         {changeTag}
-        {player.locked && <span className="tag tag-locked">Locked</span>}
         {needsPickup && <span className="tag tag-pickup">Needs Pickup</span>}
         <PlayerDetails player={player} />
       </td>
@@ -287,5 +287,17 @@ function PlayerRow({ slot, player, change, needsPickup = false }: PlayerRowProps
       </td>
       <td className="points">{pointsLabel(player)}</td>
     </tr>
+  )
+}
+
+// A padlock straight after a locked player's name. The accessible name gives
+// screen readers the same cue the icon gives everyone else; questionable and
+// out will sit here too, once there's a fresh injury source.
+function LockIcon() {
+  return (
+    <svg className="status-icon" viewBox="0 0 16 16" role="img" aria-label="Locked">
+      <path d="M5 7.5V5a3 3 0 0 1 6 0v2.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <rect x="2.5" y="7" width="11" height="8" rx="1.5" fill="currentColor" />
+    </svg>
   )
 }

@@ -229,25 +229,29 @@
   color: var(--muted);
 }
 
-.players tr:is(.is-locked, .is-bye) :is(.slot-chip, .team-label) {
+/* A locked starter's slot chip turns grey and its text takes the position's
+   colour. Chips with no position colour (BN, IR) fall back to muted text. */
+.players tr.is-locked .slot-chip {
+  background: var(--locked-bg);
+  color: var(--pos-ink, var(--muted));
+}
+
+.players tr.is-locked .team-label,
+.players tr.is-bye :is(.slot-chip, .team-label) {
   filter: grayscale(1);
   opacity: 0.7;
 }
 
-/* After the shading above, so a slot that needs a pickup always shows it */
-.players tr.needs-pickup {
-  background: var(--pickup-bg);
-}
-
 /* Colour classes set --pos-fill (a background) and --pos-ink (the same colour
-   as text, darker in light mode so it stays readable) */
+   as text, adjusted where needed so it stays readable: 4.5:1 or more on the
+   surface, the shaded rows and the grey chip) */
 .pos-qb {
   --pos-fill: var(--pos-qb);
-  --pos-ink: light-dark(#c0284c, var(--pos-qb));
+  --pos-ink: light-dark(#c0284c, #f27590);
 }
 .pos-rb {
   --pos-fill: var(--pos-rb);
-  --pos-ink: light-dark(#0f7d69, var(--pos-rb));
+  --pos-ink: light-dark(#0e7865, var(--pos-rb));
 }
 .pos-wr {
   --pos-fill: var(--pos-wr);
@@ -255,15 +259,15 @@
 }
 .pos-te {
   --pos-fill: var(--pos-te);
-  --pos-ink: light-dark(#b45a12, var(--pos-te));
+  --pos-ink: light-dark(#a85410, var(--pos-te));
 }
 .pos-k {
   --pos-fill: var(--pos-k);
-  --pos-ink: light-dark(#6d43c9, var(--pos-k));
+  --pos-ink: light-dark(#6d43c9, #ad8af1);
 }
 .pos-def {
   --pos-fill: var(--pos-def);
-  --pos-ink: light-dark(#8a5534, var(--pos-def));
+  --pos-ink: light-dark(#8a5534, #c49171);
 }
 .pos-other,
 .slot-flex {
@@ -281,7 +285,17 @@
   color: var(--sit-text);
 }
 
-/* Small labels after names: Start, Bench, Locked, Needs Pickup */
+/* Status icons straight after a player's name (the padlock; questionable and
+   out later), in the text's colour, which a locked row mutes. Sized in rem so
+   they scale with the name beside them. */
+.status-icon {
+  width: 0.9375rem;
+  height: 0.9375rem;
+  margin-left: 0.5rem;
+  vertical-align: -0.125rem;
+}
+
+/* Small labels after names: Start, Bench, Needs Pickup */
 .tag {
   display: inline-block;
   margin-left: 0.5rem;
@@ -302,11 +316,6 @@
 .tag-sit {
   background: var(--sit-bg);
   color: var(--sit-text);
-}
-
-.tag-locked {
-  background: var(--locked-bg);
-  color: var(--muted);
 }
 
 .tag-pickup {
