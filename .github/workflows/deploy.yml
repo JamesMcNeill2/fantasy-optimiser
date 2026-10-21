@@ -5,7 +5,6 @@ on:
     branches: [main, dev, "feature/**"]
 
 permissions:
-  id-token: write
   contents: read
 
 concurrency:
@@ -15,74 +14,24 @@ concurrency:
 env:
   TF_IN_AUTOMATION: "true"
   TF_INPUT: "false"
-  UV_VERSION: "0.12.23"
 
 jobs:
-  # Checks and builds the SPA on its own runner: no AWS credentials, no OIDC
-  # token, no secrets, so npm packages never run where they could reach them
-  frontend:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    env:
-      UV_LOCKED: "1"
-    defaults:
-      run:
-        working-directory: frontend
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-        with:
-          version: ${{ env.UV_VERSION }}
-          enable-cache: true
-
-      - name: Setup Node
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: frontend/.nvmrc
-          package-manager-cache: false
-
-      - name: Install Node Dependencies
-        run: npm ci --ignore-scripts
-
-      # Fails, printing the diff, if a response model changed without regenerated types
-      - name: Frontend API Types Check
-        run: |
-          npm run gen:api
-          git diff --exit-code -- openapi.json src/api-schema.ts
-
-      - name: Frontend Format Check
-        run: npm run format:check
-
-      - name: Frontend Lint
-        run: npm run lint
-
-      - name: Frontend Vitest
-        run: npx vitest run
-
-      - name: Frontend Build
-        run: npm run build
-
-      - name: Frontend Upload Build
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: frontend-dist
-          path: frontend/dist
-          if-no-files-found: error
-          retention-days: 3
+  # Lint, tests, Terraform checks and the SPA build, read-only with no secrets
+  # and no OIDC token: dependencies never run where they could reach AWS
+  checks:
+    uses: ./.github/workflows/checks.yml
+    with:
+      upload-frontend-dist: true
 
   deploy:
-    needs: frontend
+    needs: checks
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
     env:
       TF_VAR_image_tag: ${{ github.sha }}
-      TF_VAR_league_ids: ${{ secrets.LEAGUE_IDS }}
     defaults:
       run:
         working-directory: infra/live
@@ -90,6 +39,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # main -> prod, dev -> dev, feature/Foo-Bar -> feature-foo-bar
       # Branch name is passed via env to avoid script injection
@@ -115,26 +66,11 @@ jobs:
           echo "WORKSPACE=$WORKSPACE" >> "$GITHUB_ENV"
           echo "Workspace: $WORKSPACE"
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-        with:
-          version: ${{ env.UV_VERSION }}
-          enable-cache: true
-
-      - name: Ruff
-        working-directory: .
-        run: |
-          uv run --locked --only-dev ruff check
-          uv run --locked --only-dev ruff format --check
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
-          terraform_version: 1.16.2
+          terraform_version: 1.16.2 # keep in step with TERRAFORM_VERSION in checks.yml, destroy-feature.yml and local Terraform
           terraform_wrapper: false
-
-      - name: Terraform Format Check
-        run: terraform fmt -check -recursive ..
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
@@ -150,11 +86,10 @@ jobs:
       - name: Select Workspace
         run: terraform workspace select -or-create "$WORKSPACE"
 
-      - name: Terraform Validate
-        run: terraform validate
-
       - name: Terraform Apply ECR
-        run: terraform apply -lock-timeout=5m -auto-approve -target=module.ecr
+        env:
+          TF_VAR_league_ids: ${{ secrets.LEAGUE_IDS }}
+        run: terraform apply -no-color -lock-timeout=5m -auto-approve -target=module.ecr
 
       - name: Read ECR Repository URLs
         id: ecr
@@ -162,9 +97,11 @@ jobs:
           repos=$(terraform output -json ecr_repository_urls)
           api=$(jq -r '.api' <<< "$repos")
           batch=$(jq -r '.batch' <<< "$repos")
-          echo "api=$api" >> "$GITHUB_OUTPUT"
-          echo "batch=$batch" >> "$GITHUB_OUTPUT"
-          echo "registry=${api%%/*}" >> "$GITHUB_OUTPUT"
+          {
+            echo "api=$api"
+            echo "batch=$batch"
+            echo "registry=${api%%/*}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Log in to ECR
         env:
@@ -196,10 +133,12 @@ jobs:
           build_and_push batch "$BATCH_REPO"
 
       - name: Terraform Plan
-        run: terraform plan -lock-timeout=5m -out=tfplan
+        env:
+          TF_VAR_league_ids: ${{ secrets.LEAGUE_IDS }}
+        run: terraform plan -no-color -lock-timeout=5m -out=tfplan
 
       - name: Terraform Apply
-        run: terraform apply -lock-timeout=5m tfplan
+        run: terraform apply -no-color -lock-timeout=5m tfplan
 
       - name: Download Frontend Build
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
