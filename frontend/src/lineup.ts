@@ -37,8 +37,8 @@ export function playerName(player: RosterPlayer): string {
 }
 
 // The shirt number as shown, e.g. "#1", or null when there isn't one
-// (defenses have none). #0 is a real shirt number, so this checks for
-//  null, never truthiness.
+// (defences have none). #0 is a real shirt number, so this checks for
+// null, never truthiness.
 export function shirtNumberLabel(player: RosterPlayer): string | null {
   return player.shirt_number === null ? null : `#${player.shirt_number}`
 }

@@ -178,7 +178,6 @@
 .player-details {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
   margin-top: 0.125rem;
   font-size: 0.8125rem;
   gap: 0.3rem;
@@ -245,6 +244,22 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Players who can't help this week: the whole row is shaded and greyed.
+   Locked is grey; a bye is a muted violet. */
+.players tr.is-locked {
+  background: var(--locked-row);
+}
+
+.players tr.is-bye {
+  background: var(--bye-row);
+}
+
+.players tr:is(.is-locked, .is-bye) td,
+.players tr:is(.is-locked, .is-bye) .player-name,
+.players tr:is(.is-locked, .is-bye) .pos-text {
+  color: var(--muted);
+}
+
 /* In a row that can't help this week, a slot chip turns grey and its text
    takes the position's colour. Chips with no position colour (BN, IR) fall
    back to muted text. */
@@ -259,27 +274,9 @@
   color: var(--muted);
 }
 
-.players tr.is-bye {
-  background: var(--bye-row);
-}
-
-.players tr:is(.is-locked, .is-bye) td,
-.players tr:is(.is-locked, .is-bye) .player-name,
-.players tr:is(.is-locked, .is-bye) .pos-text {
-  color: var(--muted);
-}
-
-/* A locked starter's slot chip turns grey and its text takes the position's
-   colour. Chips with no position colour (BN, IR) fall back to muted text. */
-.players tr.is-locked .slot-chip {
-  background: var(--locked-bg);
-  color: var(--pos-ink, var(--muted));
-}
-
-.players tr.is-locked .team-label,
-.players tr.is-bye :is(.slot-chip, .team-label) {
-  filter: grayscale(1);
-  opacity: 0.7;
+/* After the shading above, so a slot that needs a pickup always shows it */
+.players tr.needs-pickup {
+  background: var(--pickup-bg);
 }
 
 /* Colour classes set --pos-fill (a background) and --pos-ink (the same colour

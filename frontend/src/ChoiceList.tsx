@@ -6,8 +6,8 @@ import { useImageFallback } from './useImageFallback'
 
 export interface Choice {
   value: number
-  // A same-origin image path for the badge (a team's avatar), if it has one
   label: string
+  // A same-origin image path for the badge (a team's avatar), if it has one
   image?: string | null
 }
 

@@ -817,7 +817,7 @@ def get_roster(
         tables: The configured DynamoDB tables.
 
     Returns:
-        RosterResponse: The league and team names, the team’s players, the league’s
+        RosterResponse: The league and team names, the team's players, the league's
         starting slot types and the optimal lineup with its totals.
 
     Raises:

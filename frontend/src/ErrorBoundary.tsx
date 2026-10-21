@@ -54,7 +54,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             </button>
           </p>
           <p>
-            Or start again from <a href="/">All Leagues</a>
+            Or start again from <a href="/">All Leagues</a>.
           </p>
         </main>
       </>

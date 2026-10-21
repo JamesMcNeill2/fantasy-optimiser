@@ -157,7 +157,7 @@ function MoveRow({
   )
 }
 
-// Shirt number, position in its colour and the NFL team in theirs, with a dot
+// Position in its colour, the NFL team in theirs and the shirt number, with a dot
 // between each, e.g. "QB · BUF · #17". Anything missing is left out along with
 // its dot. The dots are decoration, hidden from screen readers.
 function PlayerDetails({ player }: { player: RosterPlayer }) {

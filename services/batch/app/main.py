@@ -122,7 +122,7 @@ def write_items(table: Table, items: list[dict]) -> int:
     return count
 
 
-def avatar_exits(s3: S3Client, bucket: str, key: str) -> bool:
+def avatar_exists(s3: S3Client, bucket: str, key: str) -> bool:
     """
     Check whether an avatar is already stored.
 
@@ -188,7 +188,7 @@ def copy_avatars(
     for name in names:
         key = f"{AVATARS_FOLDER}/{name}"
         try:
-            if avatar_exits(s3, bucket, key):
+            if avatar_exists(s3, bucket, key):
                 counts["existing"] += 1
                 continue
             response = client.get(AVATAR_URL_PREFIX + name)
@@ -244,7 +244,7 @@ def handler(event, context):
     # Determine time for refreshed_at
     refreshed_at = datetime.datetime.now(datetime.UTC).isoformat()
 
-    summary = {"players": None, "users": {}, "avatar": None}
+    summary = {"players": None, "users": {}, "avatars": None}
     failures = []
     avatar_urls: list[str | None] = []
 
@@ -313,14 +313,14 @@ def handler(event, context):
             counts = copy_avatars(boto3.client("s3"), client, bucket, avatar_urls)
             summary["avatars"] = counts
             logger.info(
-                "Avatars: %d copied, %d already sorted, %d failed in %.2fs",
+                "Avatars: %d copied, %d already stored, %d failed in %.2fs",
                 counts["copied"],
                 counts["existing"],
                 counts["failed"],
                 time.perf_counter() - avatars_start,
             )
         except Exception:
-            failures.append("avatar")
+            failures.append("avatars")
             logger.exception(
                 "Avatar copy failed after %.2fs", time.perf_counter() - avatars_start
             )

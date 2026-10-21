@@ -278,6 +278,7 @@ describe('weekLabel', () => {
     expect(weekLabel(roster)).toBe('Week 6')
   })
 })
+
 describe('opponentOf', () => {
   it('gives the opponent for a game still to play', () => {
     expect(opponentOf(player({ opponent: 'LV' }))).toBe('LV')
