@@ -21,6 +21,7 @@ const TEAMS: Team[] = [
 const ROSTER: RosterResponse = {
   league_name: 'Fourth Down Heroes',
   team_name: 'Hail Marys',
+  team_avatar: null,
   players: [
     {
       player_id: '1',
@@ -134,6 +135,21 @@ describe('App', () => {
     expect(document.title).toBe("Hail Marys · Mac's Fantasy Lineup Optimiser")
     expect(screen.getByText('Sam Starter')).toBeTruthy()
     expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it("shows the team's avatar from the roster beside the lineup heading", async () => {
+    window.history.replaceState(null, '', '/?league=0&team=8')
+    stubFetch(
+      api({
+        '/api/leagues/0/teams/8/roster': () =>
+          json({ ...ROSTER, team_avatar: '/avatars/0a1b2c.jpg' }),
+      }),
+    )
+    render(<App />)
+
+    const heading = await screen.findByRole('heading', { name: 'Hail Marys' })
+    const avatar = heading.closest('header')?.querySelector('img')
+    expect(avatar?.getAttribute('src')).toBe('/avatars/0a1b2c.jpg')
   })
 
   it('keeps showing the lineup when a list fails', async () => {

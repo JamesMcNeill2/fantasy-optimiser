@@ -2,10 +2,13 @@ import './ChoiceList.css'
 import { badgeIndexes, initials } from './teamBadge'
 import { SelectionLink } from './SelectionLink'
 import type { Selection } from './urlState'
+import { useImageFallback } from './useImageFallback'
 
 export interface Choice {
   value: number
+  // A same-origin image path for the badge (a team's avatar), if it has one
   label: string
+  image?: string | null
 }
 
 interface ChoiceListProps {
@@ -27,13 +30,37 @@ export function ChoiceList({ choices, size, linkTo, onNavigate }: ChoiceListProp
       {choices.map((choice, i) => (
         <li key={choice.value}>
           <SelectionLink className="choice" to={linkTo(choice.value)} onNavigate={onNavigate}>
-            <span className={`badge badge-${colours[i]}`} aria-hidden="true">
-              {initials(choice.label, initialCount)}
-            </span>
+            <Badge
+              image={choice.image ?? null}
+              initials={initials(choice.label, initialCount)}
+              colour={colours[i]}
+            />
             <span className="choice-label">{choice.label}</span>
           </SelectionLink>
         </li>
       ))}
     </ul>
+  )
+}
+
+interface BadgeProps {
+  image: string | null
+  initials: string
+  colour: number
+}
+
+// The image when there is one, or the coloured initials, which also replace
+// an image that fails to load. Decorative either way: the name beside it is
+// the link's text.
+function Badge({ image, initials, colour }: BadgeProps) {
+  const [shownImage, onImageError] = useImageFallback(image)
+
+  if (shownImage !== null) {
+    return <img className="badge badge-image" src={shownImage} alt="" onError={onImageError} />
+  }
+  return (
+    <span className={`badge badge-${colour}`} aria-hidden="true">
+      {initials}
+    </span>
   )
 }

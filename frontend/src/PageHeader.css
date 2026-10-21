@@ -31,3 +31,25 @@
   color: var(--muted);
   font-size: 1.0625rem;
 }
+
+/* With an image: the image fills a column of its own, centred on the heading
+   and subtitle, while the back link stays across the top. Its fixed size holds
+   the space while it loads. */
+.page-head.with-image {
+  grid-template-columns: auto 1fr;
+  column-gap: 0.875rem;
+}
+
+.page-head.with-image > .back {
+  grid-column: 1 / -1;
+}
+
+.page-image {
+  grid-row: span 2;
+  align-self: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--locked-bg);
+}

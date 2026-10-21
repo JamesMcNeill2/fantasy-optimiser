@@ -268,6 +268,7 @@ describe('weekLabel', () => {
     const roster: RosterResponse = {
       league_name: 'Test League',
       team_name: 'Test Team',
+      team_avatar: null,
       players: [player()],
       season: '2026',
       week: 6,

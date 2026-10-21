@@ -26,6 +26,11 @@ To use a deployed api instead, set `API_PROXY_TARGET` (e.g.
 `https://<distribution>.cloudfront.net`) before `npm run dev` or
 `npm run preview`.
 
+Team avatars only exist in a deployed site bucket, so `/avatars/…` goes to a
+deployed environment too: set `SITE_PROXY_TARGET` the same way when using the
+local api (`API_PROXY_TARGET` covers both). Without either, every avatar falls
+back to its initials badge.
+
 The dev server runs the app in React's `StrictMode`, which runs effects twice,
 so every request appears twice in the browser's Network tab. Use
 `npm run build` then `npm run preview` to see real request behaviour.

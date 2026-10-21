@@ -178,6 +178,9 @@ class RosterResponse(ResponseModel):
     """A roster response containing all players for a team.
 
     Attributes:
+        league_name: The display name for the league.
+        team_name: The display name for the team.
+        team_avatar: The site path of the team's avatar, when it has one.
         players: The rostered players for the team.
         season: The season identifier for the roster data.
         week: The week number for the roster data.
@@ -187,6 +190,7 @@ class RosterResponse(ResponseModel):
 
     league_name: str
     team_name: str
+    team_avatar: str | None = None
     players: list[RosterPlayer]
     season: str
     week: int
@@ -827,9 +831,11 @@ def get_roster(
     if roster is None:
         raise HTTPException(status_code=404, detail="Team not found")
 
-    # Resolve the team's display name
+    # Resolve the team's display name and avatar
     users_by_id = get_users_by_id(tables, league_id)
-    team_name = resolve_team_name(roster_id, users_by_id.get(roster.get("owner_id")))
+    owner = users_by_id.get(roster.get("owner_id"))
+    team_name = resolve_team_name(roster_id, owner)
+    team_avatar = avatar_path(owner.get("avatar")) if owner else None
 
     # Define reserve and starting players
     player_ids = roster.get("players") or []  # players = ["1111"] * 15
@@ -938,6 +944,7 @@ def get_roster(
     return RosterResponse(
         league_name=display_league_name(league, league_key),
         team_name=team_name,
+        team_avatar=team_avatar,
         players=roster_players,
         season=nfl_week.season,
         week=nfl_week.week,

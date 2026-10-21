@@ -16,6 +16,11 @@ from types import SimpleNamespace
 
 import httpx
 import pytest
+from fastapi import HTTPException
+from fastapi.testclient import TestClient
+from shared.config import Config
+from shared.sleeper import BASE_URL
+
 from app import main
 from app.main import (
     NflWeek,
@@ -33,10 +38,6 @@ from app.main import (
     get_roster_positions,
     get_week_games,
 )
-from fastapi import HTTPException
-from fastapi.testclient import TestClient
-from shared.config import Config
-from shared.sleeper import BASE_URL
 
 # --- Fake data -----------------------------------------------------------------
 # Obviously fake IDs: this file is committed, and distinctive values make the
@@ -1238,6 +1239,33 @@ def test_get_roster_name_fallbacks(api, sleeper, url, league_name, team_name):
     assert response.status_code == 200
     body = response.json()
     assert (body["league_name"], body["team_name"]) == (league_name, team_name)
+
+
+@pytest.mark.parametrize(
+    ("url", "team_avatar"),
+    [
+        pytest.param(ROSTER_URL, "/avatars/0a1b2c.jpg", id="sleeper-upload"),
+        pytest.param(
+            "/api/leagues/1/teams/1/roster",
+            "/avatars/3d4e5f.jpeg",
+            id="the-selected-leagues-users",
+        ),
+        pytest.param("/api/leagues/0/teams/2/roster", None, id="not-a-sleeper-upload"),
+        pytest.param("/api/leagues/0/teams/3/roster", None, id="no-owner"),
+        pytest.param("/api/leagues/0/teams/4/roster", None, id="no-avatar-attribute"),
+        pytest.param("/api/leagues/0/teams/5/roster", None, id="avatar-stored-as-null"),
+        pytest.param("/api/leagues/0/teams/6/roster", None, id="no-users-row"),
+    ],
+)
+def test_get_roster_team_avatar(api, url, team_avatar):
+    response = api.get(url)
+
+    assert response.status_code == 200
+    assert response.json()["team_avatar"] == team_avatar
+    # Only the site's own /avatars/ path, so browsers never contact Sleeper.
+    assert "sleepercdn" not in response.text
+    assert "example.com" not in response.text
+    assert_no_ids(response)
 
 
 def test_get_roster_lineup(api):

@@ -2,6 +2,7 @@ import type { Ref } from 'react'
 import './PageHeader.css'
 import { SelectionLink } from './SelectionLink'
 import type { Selection } from './urlState'
+import { useImageFallback } from './useImageFallback'
 
 interface PageHeaderProps {
   title: string
@@ -11,12 +12,25 @@ interface PageHeaderProps {
   onNavigate: (next: Selection) => void
   // Lets the app move focus here after a navigation
   headingRef?: Ref<HTMLHeadingElement>
+  // A same-origin image to show beside the heading (a team's avatar), if any
+  image?: string | null
 }
 
-// The top of every page: an optional back link, the heading and a line under it.
-export function PageHeader({ title, subtitle, back, onNavigate, headingRef }: PageHeaderProps) {
+// The top of every page: an optional back link, the heading and a line under
+// it, with an optional image beside the heading. The image is decorative (the
+// heading names the page), and is simply left out if it fails to load.
+export function PageHeader({
+  title,
+  subtitle,
+  back,
+  onNavigate,
+  headingRef,
+  image = null,
+}: PageHeaderProps) {
+  const [shownImage, onImageError] = useImageFallback(image)
+
   return (
-    <header className="page-head">
+    <header className={shownImage === null ? 'page-head' : 'page-head with-image'}>
       {back !== undefined && (
         <SelectionLink
           className="back"
@@ -36,6 +50,9 @@ export function PageHeader({ title, subtitle, back, onNavigate, headingRef }: Pa
           </svg>
           {back.label}
         </SelectionLink>
+      )}
+      {shownImage !== null && (
+        <img className="page-image" src={shownImage} alt="" onError={onImageError} />
       )}
       <h2 ref={headingRef} tabIndex={-1}>
         {title}

@@ -33,6 +33,7 @@ function player(overrides: Partial<RosterPlayer>): RosterPlayer {
 const ROSTER: RosterResponse = {
   league_name: 'Test League',
   team_name: 'Test Team',
+  team_avatar: null,
   players: [
     player({
       player_id: '1',
@@ -144,7 +145,7 @@ function detailsOf(name: string): HTMLElement {
 }
 
 describe('LineupView: player details', () => {
-  it('shows the shirt number, position and team with a dot between each', () => {
+  it('shows the position, team and shirt number with a dot between each', () => {
     render(<LineupView roster={ROSTER} />)
 
     // #0 is a real shirt number, not a missing one

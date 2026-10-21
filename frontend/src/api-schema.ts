@@ -230,6 +230,9 @@ export interface components {
          * @description A roster response containing all players for a team.
          *
          *     Attributes:
+         *         league_name: The display name for the league.
+         *         team_name: The display name for the team.
+         *         team_avatar: The site path of the team's avatar, when it has one.
          *         players: The rostered players for the team.
          *         season: The season identifier for the roster data.
          *         week: The week number for the roster data.
@@ -241,6 +244,8 @@ export interface components {
             league_name: string;
             /** Team Name */
             team_name: string;
+            /** Team Avatar */
+            team_avatar: string | null;
             /** Players */
             players: components["schemas"]["RosterPlayer"][];
             /** Season */

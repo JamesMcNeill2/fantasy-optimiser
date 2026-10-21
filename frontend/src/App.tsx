@@ -125,7 +125,11 @@ function App() {
             <RequestStatus requests={[leaguesRequest, teamsRequest]} loading="Loading teams…" />
             {league !== undefined && teamList !== undefined && (
               <ChoiceList
-                choices={teamList.map((item) => ({ value: item.roster_id, label: item.team_name }))}
+                choices={teamList.map((item) => ({
+                  value: item.roster_id,
+                  label: item.team_name,
+                  image: item.avatar,
+                }))}
                 size="regular"
                 linkTo={(id) => ({ league: league.key, team: id })}
                 onNavigate={choose}
@@ -140,6 +144,7 @@ function App() {
               <PageHeader
                 title={rosterData.team_name}
                 subtitle={weekLabel(rosterData)}
+                image={rosterData.team_avatar}
                 back={{ label: rosterData.league_name, to: { league: leagueKey, team: null } }}
                 onNavigate={choose}
                 headingRef={headingRef}

@@ -72,6 +72,13 @@
   font-size: 1rem;
 }
 
+/* An avatar fills the same circle. The grey shows while it loads, so the box
+   never changes size or jumps. */
+.badge-image {
+  object-fit: cover;
+  background: var(--locked-bg);
+}
+
 .badge-0 {
   background: #4aa8f0;
 }
