@@ -22,6 +22,6 @@ RUN cd /build && \
 # Code last
 # Least frequently changed first
 COPY shared/src/shared/ ${LAMBDA_TASK_ROOT}/shared/
-COPY services/api/app/ ${LAMBDA_TASK_ROOT}/app/
+COPY services/api/app/ ${LAMBDA_TASK_ROOT}/app/x
 
 CMD ["app.main.handler"]
