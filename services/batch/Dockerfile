@@ -24,4 +24,4 @@ RUN cd /build && \
 COPY shared/src/shared/ ${LAMBDA_TASK_ROOT}/shared/
 COPY services/batch/app/ ${LAMBDA_TASK_ROOT}/app/
 
-CMD ["app.main.handler"]
+CMD ["app.main.handlerx"]
