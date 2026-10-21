@@ -45,10 +45,16 @@ function App() {
   const page = leagueKey === null ? 'leagues' : rosterId === null ? 'teams' : 'lineup'
   const league = leagueList?.find((item) => item.key === leagueKey)
 
-  // Whether the page's heading is on screen yet: the teams page waits for its
-  // league's name, the lineup page for the roster
+  // The teams page's header waits for the team list as well as the league's
+  // name (or for the list's error, so the header still sits above it). It then
+  // arrives with the boxes, instead of appearing above "Loading teams…" and
+  // pushing it down.
+  const teamsHeaderShown = league !== undefined && teams.status !== 'loading'
+
+  // Whether the page's heading is on screen yet: the lineup page's arrives
+  // with the roster
   const headingShown =
-    page === 'leagues' || (page === 'teams' ? league !== undefined : rosterData !== undefined)
+    page === 'leagues' || (page === 'teams' ? teamsHeaderShown : rosterData !== undefined)
 
   const leaguesRequest = { state: leagues, onRetry: retryLeagues }
   const teamsRequest = { state: teams, onRetry: retryTeams }
@@ -108,7 +114,7 @@ function App() {
 
         {page === 'teams' && (
           <>
-            {league !== undefined && (
+            {league !== undefined && teamsHeaderShown && (
               <PageHeader
                 title={league.name}
                 subtitle="Choose Your Team"

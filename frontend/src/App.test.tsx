@@ -160,6 +160,33 @@ describe('App', () => {
     expect(document.activeElement).toBe(heading)
   })
 
+  it('shows a refreshed team list and its header together, not the header first', async () => {
+    window.history.replaceState(null, '', '/?league=0')
+    const teams = deferred<Response>()
+    stubFetch(api({ '/api/leagues/0/teams': () => teams.promise }))
+    render(<App />)
+
+    // The leagues list has arrived, but the header waits for the team list
+    await settle()
+    expect(screen.queryByRole('heading', { name: 'No Punt Intended' })).toBeNull()
+    expect(screen.getByRole('status').textContent).toBe('Loading teams…')
+
+    teams.resolve(json(TEAMS))
+    await screen.findByRole('heading', { name: 'No Punt Intended' })
+    expect(screen.getByRole('link', { name: 'Big boys' })).toBeTruthy()
+  })
+
+  it('keeps the team list header above its error', async () => {
+    window.history.replaceState(null, '', '/?league=0')
+    stubFetch(
+      api({ '/api/leagues/0/teams': () => json({ detail: 'Sleeper request failed' }, 502) }),
+    )
+    render(<App />)
+
+    await screen.findByRole('alert')
+    expect(screen.getByRole('heading', { name: 'No Punt Intended' })).toBeTruthy()
+  })
+
   it('retries every failed request with one Try Again', async () => {
     window.history.replaceState(null, '', '/?league=0&team=8')
     let serverUp = false
