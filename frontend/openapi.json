@@ -468,7 +468,7 @@
           "avatar"
         ],
         "title": "Team",
-        "description": "A team summary within a league.\n\nAttributes:\n    roster_id: The Sleeper roster identifier.\n    team_name: The display name for the team."
+        "description": "A team summary within a league.\n\nAttributes:\n    roster_id: The Sleeper roster identifier.\n    team_name: The display name for the team.\n    avatar: The site path of the team's avatar, when it has one."
       },
       "ValidationError": {
         "properties": {
