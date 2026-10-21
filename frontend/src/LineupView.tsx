@@ -131,7 +131,7 @@ export function LineupView({ roster }: LineupViewProps) {
   )
 }
 
-// One line in the summary: who to start or bench, and their points.
+// One line in the summary: who to start or sit, and their points.
 function MoveRow({
   action,
   player,
@@ -141,7 +141,7 @@ function MoveRow({
 }) {
   return (
     <li className="move">
-      <span className={`move-action move-${action}`}>{action === 'start' ? 'Start' : 'Bench'}</span>
+      <span className={`move-action move-${action}`}>{action === 'start' ? 'Start' : 'Sit'}</span>
       {player === undefined ? (
         <span className="move-name">Unknown Player</span>
       ) : (
@@ -267,7 +267,7 @@ function EmptyRow({ slot }: { slot: string }) {
     <tr className="needs-pickup">
       <SlotCell slot={slot} />
       <td colSpan={3}>
-        Empty <span className="tag tag-pickup">Needs Pickup</span>
+        Empty <span className="tag tag-pickup">Waiver</span>
       </td>
     </tr>
   )
@@ -279,7 +279,7 @@ function PlayerRow({ slot, player, change, needsPickup = false }: PlayerRowProps
   const changeTag = (
     <>
       {change === 'start' && <span className="tag tag-start">Start</span>}
-      {change === 'sit' && <span className="tag tag-sit">Bench</span>}
+      {change === 'sit' && <span className="tag tag-sit">Sit</span>}
     </>
   )
 
@@ -307,7 +307,7 @@ function PlayerRow({ slot, player, change, needsPickup = false }: PlayerRowProps
         <span className="player-name">{playerName(player)}</span>
         {player.locked && <LockIcon />}
         {changeTag}
-        {needsPickup && <span className="tag tag-pickup">Needs Pickup</span>}
+        {needsPickup && <span className="tag tag-pickup">Waiver</span>}
         <PlayerDetails player={player} />
       </td>
       <td>

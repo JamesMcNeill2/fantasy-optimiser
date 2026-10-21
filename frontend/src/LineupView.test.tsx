@@ -1,168 +1,245 @@
 // @vitest-environment jsdom
-import { render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
-import type { RosterPlayer, RosterResponse } from './api'
-import { LineupView } from './LineupView'
-import { setUpBrowserTests } from './testHelpers'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import type { League, RosterResponse, Team } from './api'
+import App from './App'
+import { ErrorBoundary } from './ErrorBoundary'
+import { deferred, json, settle, setUpBrowserTests, stubFetch, type Routes } from './testHelpers'
 
 setUpBrowserTests()
 
-// An unlocked player yet to play. Each player overrides only what it needs.
-function player(overrides: Partial<RosterPlayer>): RosterPlayer {
+const LEAGUES: League[] = [
+  { key: 0, name: 'Fourth Down Heroes' },
+  { key: 1, name: 'End Zone Elite' },
+]
+
+const TEAMS: Team[] = [
+  { roster_id: 3, team_name: 'Blitz Brigade', avatar: null },
+  { roster_id: 8, team_name: 'Hail Marys', avatar: null },
+]
+
+const ROSTER: RosterResponse = {
+  league_name: 'Fourth Down Heroes',
+  team_name: 'Hail Marys',
+  team_avatar: null,
+  players: [
+    {
+      player_id: '1',
+      starter_slot: 0,
+      reserve: false,
+      first_name: 'Sam',
+      last_name: 'Starter',
+      shirt_number: 17,
+      position: 'QB',
+      team: 'BUF',
+      injury_status: null,
+      projected_points: 21.5,
+      opponent: 'MIA',
+      game_status: 'pre_game',
+      locked: false,
+      actual_points: null,
+    },
+  ],
+  season: '2026',
+  week: 6,
+  slots: ['QB'],
+  lineup: { starter_ids: ['1'], bench_ids: [], optimal_total: 21.5, current_total: 21.5 },
+}
+
+// The api for league 0 and team 8. A test can replace or add any path.
+function api(overrides: Routes = {}): Routes {
   return {
-    player_id: '1',
-    starter_slot: null,
-    reserve: false,
-    first_name: 'Test',
-    last_name: 'Player',
-    shirt_number: null,
-    position: 'WR',
-    team: 'KC',
-    injury_status: null,
-    projected_points: 10,
-    opponent: 'LV',
-    game_status: 'pre_game',
-    locked: false,
-    actual_points: null,
+    '/api/leagues': () => json(LEAGUES),
+    '/api/leagues/0/teams': () => json(TEAMS),
+    '/api/leagues/0/teams/8/roster': () => json(ROSTER),
     ...overrides,
   }
 }
 
-// A locked starter, an unlocked starter, a locked bench player and a bench
-// player on a bye. Already optimal, so no Start or Bench tags get in the way.
-const ROSTER: RosterResponse = {
-  league_name: 'Test League',
-  team_name: 'Test Team',
-  team_avatar: null,
-  players: [
-    player({
-      player_id: '1',
-      starter_slot: 0,
-      first_name: 'Lou',
-      last_name: 'Locked',
-      shirt_number: 0,
-      position: 'QB',
-      locked: true,
-      game_status: 'in_game',
-      actual_points: 12.4,
-    }),
-    player({
-      player_id: '2',
-      starter_slot: 1,
-      first_name: 'Pat',
-      last_name: 'Pending',
-      position: 'RB',
-      projected_points: 18,
-    }),
-    player({
-      player_id: '3',
-      first_name: 'Ben',
-      last_name: 'Bolted',
-      locked: true,
-      game_status: 'complete',
-      actual_points: 8,
-    }),
-    player({
-      player_id: '4',
-      first_name: 'Bo',
-      last_name: 'Byeweek',
-      position: 'TE',
-      opponent: null,
-      game_status: 'bye',
-      projected_points: null,
-    }),
-  ],
-  season: '2026',
-  week: 7,
-  slots: ['QB', 'RB'],
-  lineup: {
-    starter_ids: ['1', '2'],
-    bench_ids: ['3', '4'],
-    optimal_total: 30.4,
-    current_total: 30.4,
-  },
-}
+describe('App', () => {
+  it('opens a shared lineup link without showing the pickers on the way', async () => {
+    window.history.replaceState(null, '', '/?league=0&team=8')
+    const fetchMock = stubFetch(api())
+    render(<App />)
 
-// The table row holding a player's name.
-function rowOf(name: string): HTMLTableRowElement {
-  const row = screen.getByText(name).closest<HTMLTableRowElement>('tr')
-  if (row === null) throw new Error(`No table row for ${name}`)
-  return row
-}
+    // All three requests start on the first render, before any has answered
+    expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
+      '/api/leagues',
+      '/api/leagues/0/teams',
+      '/api/leagues/0/teams/8/roster',
+    ])
+    expect(screen.getByRole('status').textContent).toBe('Loading lineup…')
+    expect(screen.queryByText('Choose Your League')).toBeNull()
 
-describe('LineupView: locked players', () => {
-  it("puts a padlock straight after a locked player's name", () => {
-    render(<LineupView roster={ROSTER} />)
-
-    const icon = within(rowOf('Lou Locked')).getByRole('img', { name: 'Locked' })
-    // Next to the name, where the other tags and future status icons go
-    expect(screen.getByText('Lou Locked').nextElementSibling).toBe(icon)
+    // findBy… waits for the element, and fails the test if it never appears
+    await screen.findByRole('heading', { name: 'Hail Marys' })
+    expect(screen.getByText('Sam Starter')).toBeTruthy()
   })
 
-  it('marks locked players on the bench too, and nobody else', () => {
-    render(<LineupView roster={ROSTER} />)
+  it('drops back to the team list for a stale team, without a "not found" message', async () => {
+    window.history.replaceState(null, '', '/?league=0&team=999')
+    const teams = deferred<Response>()
+    stubFetch(
+      api({
+        '/api/leagues/0/teams': () => teams.promise,
+        '/api/leagues/0/teams/999/roster': () => json({ detail: 'Team not found' }, 404),
+      }),
+    )
+    render(<App />)
 
-    expect(screen.getAllByRole('img', { name: 'Locked' })).toHaveLength(2)
-    expect(within(rowOf('Ben Bolted')).getByRole('img', { name: 'Locked' })).toBeTruthy()
-    expect(within(rowOf('Pat Pending')).queryByRole('img', { name: 'Locked' })).toBeNull()
+    // The roster's 404 has arrived, but the page waits for the team list
+    await settle()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByRole('status').textContent).toBe('Loading lineup…')
+
+    teams.resolve(json(TEAMS))
+    await screen.findByRole('heading', { name: 'Fourth Down Heroes' })
+    expect(screen.getByRole('link', { name: 'Hail Marys' })).toBeTruthy()
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 
-  it('no longer shows a Locked tag', () => {
-    render(<LineupView roster={ROSTER} />)
+  it('steps through to a lineup, moving focus to each heading, and Back returns', async () => {
+    stubFetch(api())
+    render(<App />)
 
-    expect(screen.queryByText('Locked')).toBeNull()
-  })
-})
+    fireEvent.click(await screen.findByRole('link', { name: 'Fourth Down Heroes' }))
+    const leagueHeading = await screen.findByRole('heading', { name: 'Fourth Down Heroes' })
+    expect(document.activeElement).toBe(leagueHeading)
+    expect(window.location.search).toBe('?league=0')
 
-describe('LineupView: byes', () => {
-  it('shows a bye as a violet label in the Fixture column', () => {
-    render(<LineupView roster={ROSTER} />)
+    fireEvent.click(await screen.findByRole('link', { name: 'Hail Marys' }))
+    await screen.findByRole('heading', { name: 'Hail Marys' })
+    expect(window.location.search).toBe('?league=0&team=8')
+    expect(document.title).toBe("Hail Marys · Mac's Fantasy Lineup Optimiser")
 
-    const label = within(rowOf('Bo Byeweek')).getByText('BYE')
-    // Slot, Player, Fixture, Points: the Fixture cell is the third
-    expect(rowOf('Bo Byeweek').cells[2].contains(label)).toBe(true)
-    expect(label.classList.contains('bye-label')).toBe(true)
-    // Not a team-label: bye rows grey those out, and this one stays violet
-    expect(label.classList.contains('team-label')).toBe(false)
-  })
-})
-
-describe('LineupView: columns', () => {
-  it('heads the opponent column Fixture in every table', () => {
-    render(<LineupView roster={ROSTER} />)
-
-    // Starters and Bench (no one is on injured reserve)
-    expect(screen.getAllByRole('columnheader', { name: 'Fixture' })).toHaveLength(2)
-    expect(screen.queryByRole('columnheader', { name: 'Game' })).toBeNull()
-  })
-})
-
-// The details line under a player's name.
-function detailsOf(name: string): HTMLElement {
-  const details = rowOf(name).querySelector<HTMLElement>('.player-details')
-  if (details === null) throw new Error(`No details line for ${name}`)
-  return details
-}
-
-describe('LineupView: player details', () => {
-  it('shows the position, team and shirt number with a dot between each', () => {
-    render(<LineupView roster={ROSTER} />)
-
-    // #0 is a real shirt number, not a missing one
-    expect(detailsOf('Lou Locked').textContent).toBe('QB·KC·#0')
+    window.history.back()
+    await screen.findByRole('heading', { name: 'Fourth Down Heroes' })
+    expect(window.location.search).toBe('?league=0')
   })
 
-  it('leaves out a missing shirt number along with its dot', () => {
-    render(<LineupView roster={ROSTER} />)
+  it('shows the lineup and its header from the roster alone, before either list arrives', async () => {
+    window.history.replaceState(null, '', '/?league=0&team=8')
+    const leagues = deferred<Response>()
+    const teams = deferred<Response>()
+    stubFetch(
+      api({
+        '/api/leagues': () => leagues.promise,
+        '/api/leagues/0/teams': () => teams.promise,
+      }),
+    )
+    render(<App />)
 
-    expect(detailsOf('Pat Pending').textContent).toBe('RB·KC')
+    // The names come from the roster response: neither list has answered
+    await screen.findByRole('heading', { name: 'Hail Marys' })
+    expect(screen.getByRole('link', { name: 'Back to Fourth Down Heroes' })).toBeTruthy()
+    expect(document.title).toBe("Hail Marys · Mac's Fantasy Lineup Optimiser")
+    expect(screen.getByText('Sam Starter')).toBeTruthy()
+    expect(screen.queryByRole('status')).toBeNull()
   })
 
-  it('hides the dots from screen readers', () => {
-    render(<LineupView roster={ROSTER} />)
+  it("shows the team's avatar from the roster beside the lineup heading", async () => {
+    window.history.replaceState(null, '', '/?league=0&team=8')
+    stubFetch(
+      api({
+        '/api/leagues/0/teams/8/roster': () =>
+          json({ ...ROSTER, team_avatar: '/avatars/0a1b2c.jpg' }),
+      }),
+    )
+    render(<App />)
 
-    const dots = [...detailsOf('Lou Locked').children].filter((child) => child.textContent === '·')
-    expect(dots).toHaveLength(2)
-    for (const dot of dots) expect(dot.getAttribute('aria-hidden')).toBe('true')
+    const heading = await screen.findByRole('heading', { name: 'Hail Marys' })
+    const avatar = heading.closest('header')?.querySelector('img')
+    expect(avatar?.getAttribute('src')).toBe('/avatars/0a1b2c.jpg')
+  })
+
+  it('keeps showing the lineup when a list fails', async () => {
+    window.history.replaceState(null, '', '/?league=0&team=8')
+    stubFetch(api({ '/api/leagues': () => json({ detail: 'Sleeper request failed' }, 502) }))
+    render(<App />)
+
+    await screen.findByRole('heading', { name: 'Hail Marys' })
+    await settle()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByText('Sam Starter')).toBeTruthy()
+  })
+
+  it('moves focus to the lineup heading once the roster arrives', async () => {
+    window.history.replaceState(null, '', '/?league=0')
+    const roster = deferred<Response>()
+    stubFetch(api({ '/api/leagues/0/teams/8/roster': () => roster.promise }))
+    render(<App />)
+
+    fireEvent.click(await screen.findByRole('link', { name: 'Hail Marys' }))
+    expect(screen.getByRole('status').textContent).toBe('Loading lineup…')
+
+    roster.resolve(json(ROSTER))
+    const heading = await screen.findByRole('heading', { name: 'Hail Marys' })
+    expect(document.activeElement).toBe(heading)
+  })
+
+  it('shows a refreshed team list and its header together, not the header first', async () => {
+    window.history.replaceState(null, '', '/?league=0')
+    const teams = deferred<Response>()
+    stubFetch(api({ '/api/leagues/0/teams': () => teams.promise }))
+    render(<App />)
+
+    // The leagues list has arrived, but the header waits for the team list
+    await settle()
+    expect(screen.queryByRole('heading', { name: 'Fourth Down Heroes' })).toBeNull()
+    expect(screen.getByRole('status').textContent).toBe('Loading teams…')
+
+    teams.resolve(json(TEAMS))
+    await screen.findByRole('heading', { name: 'Fourth Down Heroes' })
+    expect(screen.getByRole('link', { name: 'Hail Marys' })).toBeTruthy()
+  })
+
+  it('keeps the team list header above its error', async () => {
+    window.history.replaceState(null, '', '/?league=0')
+    stubFetch(
+      api({ '/api/leagues/0/teams': () => json({ detail: 'Sleeper request failed' }, 502) }),
+    )
+    render(<App />)
+
+    await screen.findByRole('alert')
+    expect(screen.getByRole('heading', { name: 'Fourth Down Heroes' })).toBeTruthy()
+  })
+
+  it('retries every failed request with one Try Again', async () => {
+    window.history.replaceState(null, '', '/?league=0&team=8')
+    let serverUp = false
+    // Like the Vite proxy while uvicorn is down: a 502 with no JSON detail
+    const throughProxy = (answer: () => Response) => () =>
+      serverUp ? answer() : new Response('Bad Gateway', { status: 502 })
+    stubFetch({
+      '/api/leagues': throughProxy(() => json(LEAGUES)),
+      '/api/leagues/0/teams': throughProxy(() => json(TEAMS)),
+      '/api/leagues/0/teams/8/roster': throughProxy(() => json(ROSTER)),
+    })
+    render(<App />)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('The server is not responding.')
+    await settle() // all three failures are in
+
+    serverUp = true
+    fireEvent.click(screen.getByRole('button', { name: 'Try Again' }))
+    await screen.findByRole('heading', { name: 'Hail Marys' })
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('shows a message, not a blank page, when a response has an unexpected shape', async () => {
+    // React logs the caught error; keep the test output clean
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    // An object where the leagues list should be: App itself fails to render,
+    // which only a boundary above App can catch
+    stubFetch(api({ '/api/leagues': () => json({ leagues: LEAGUES }) }))
+    render(
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>,
+    )
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('Something went wrong showing this page.')
   })
 })
