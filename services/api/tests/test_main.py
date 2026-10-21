@@ -16,11 +16,6 @@ from types import SimpleNamespace
 
 import httpx
 import pytest
-from fastapi import HTTPException
-from fastapi.testclient import TestClient
-from shared.config import Config
-from shared.sleeper import BASE_URL
-
 from app import main
 from app.main import (
     NflWeek,
@@ -38,6 +33,10 @@ from app.main import (
     get_roster_positions,
     get_week_games,
 )
+from fastapi import HTTPException
+from fastapi.testclient import TestClient
+from shared.config import Config
+from shared.sleeper import BASE_URL
 
 # --- Fake data -----------------------------------------------------------------
 # Obviously fake IDs: this file is committed, and distinctive values make the
