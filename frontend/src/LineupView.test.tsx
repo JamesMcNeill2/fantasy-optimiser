@@ -28,8 +28,8 @@ function player(overrides: Partial<RosterPlayer>): RosterPlayer {
   }
 }
 
-// A locked starter, an unlocked starter and a locked bench player. Already
-// optimal, so no Start or Bench tags get in the way.
+// A locked starter, an unlocked starter, a locked bench player and a bench
+// player on a bye. Already optimal, so no Start or Bench tags get in the way.
 const ROSTER: RosterResponse = {
   league_name: 'Test League',
   team_name: 'Test Team',
@@ -60,16 +60,30 @@ const ROSTER: RosterResponse = {
       game_status: 'complete',
       actual_points: 8,
     }),
+    player({
+      player_id: '4',
+      first_name: 'Bo',
+      last_name: 'Byeweek',
+      position: 'TE',
+      opponent: null,
+      game_status: 'bye',
+      projected_points: null,
+    }),
   ],
   season: '2026',
   week: 7,
   slots: ['QB', 'RB'],
-  lineup: { starter_ids: ['1', '2'], bench_ids: ['3'], optimal_total: 30.4, current_total: 30.4 },
+  lineup: {
+    starter_ids: ['1', '2'],
+    bench_ids: ['3', '4'],
+    optimal_total: 30.4,
+    current_total: 30.4,
+  },
 }
 
 // The table row holding a player's name.
-function rowOf(name: string): HTMLElement {
-  const row = screen.getByText(name).closest('tr')
+function rowOf(name: string): HTMLTableRowElement {
+  const row = screen.getByText(name).closest<HTMLTableRowElement>('tr')
   if (row === null) throw new Error(`No table row for ${name}`)
   return row
 }
@@ -95,5 +109,18 @@ describe('LineupView: locked players', () => {
     render(<LineupView roster={ROSTER} />)
 
     expect(screen.queryByText('Locked')).toBeNull()
+  })
+})
+
+describe('LineupView: byes', () => {
+  it('shows a bye as a violet label in the Game column', () => {
+    render(<LineupView roster={ROSTER} />)
+
+    const label = within(rowOf('Bo Byeweek')).getByText('BYE')
+    // Slot, Player, Game, Points: the Game cell is the third
+    expect(rowOf('Bo Byeweek').cells[2].contains(label)).toBe(true)
+    expect(label.classList.contains('bye-label')).toBe(true)
+    // Not a team-label: bye rows grey those out, and this one stays violet
+    expect(label.classList.contains('team-label')).toBe(false)
   })
 })

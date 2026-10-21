@@ -193,12 +193,25 @@
   font-weight: 700;
 }
 
-.team-label {
+/* NFL team codes and BYE share one label shape. inline-block, so the label is
+   a full line tall wherever it sits: a plain inline span only paints its
+   background behind the glyphs, which made BYE shorter than a team label in
+   a flex row. */
+.team-label,
+.bye-label {
+  display: inline-block;
   padding: 0 0.35rem;
   border-radius: 0.25rem;
   font-size: 0.75rem;
   font-weight: 700;
   line-height: 1.5;
+}
+
+/* A deeper shade of the bye row's violet. Its own class, not team-label, so
+   the greyed-out filter on bye rows' team labels doesn't reach it. */
+.bye-label {
+  background: var(--bye-label-bg);
+  color: var(--bye-label-text);
 }
 
 .game {

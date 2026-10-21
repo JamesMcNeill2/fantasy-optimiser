@@ -179,8 +179,10 @@ function TeamLabel({ team }: { team: string }) {
   )
 }
 
-// The game column: the opponent in their team's colour, or BYE, Cancelled or "-".
+// The game column: the opponent in their team's colour, BYE as a violet label
+// to match the row, or Cancelled or "-".
 function GameCell({ player }: { player: RosterPlayer }) {
+  if (player.game_status === 'bye') return <span className="bye-label">{gameLabel(player)}</span>
   const opponent = opponentOf(player)
   if (opponent === null) return <>{gameLabel(player)}</>
   return (

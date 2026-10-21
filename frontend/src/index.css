@@ -20,6 +20,8 @@
   --locked-bg: light-dark(#eceef6, #2b2f4c);
   --locked-row: light-dark(#f4f5fa, #1d2035);
   --bye-row: light-dark(#f1eefb, #241f3d);
+  --bye-label-bg: light-dark(#d9cff5, #3b3266);
+  --bye-label-text: light-dark(#553a96, #cdbdf7);
 
   /* Position colours: the same in both modes, always with dark text */
   --chip-text: #10131f;
