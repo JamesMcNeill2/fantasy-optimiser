@@ -110,6 +110,7 @@ class Team(ResponseModel):
     Attributes:
         roster_id: The Sleeper roster identifier.
         team_name: The display name for the team.
+        avatar: The site path of the team's avatar, when it has one.
     """
 
     roster_id: int
