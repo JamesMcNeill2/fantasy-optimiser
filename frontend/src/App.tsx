@@ -15,8 +15,7 @@ import { trustedId, useSelection } from './urlState'
 import { weekLabel } from './lineup'
 import { PageHeader } from './PageHeader'
 import { SelectionLink } from './SelectionLink'
-
-const APP_NAME = "Mac's Fantasy Lineup Optimiser"
+import { APP_NAME } from './appName'
 
 function App() {
   const [selection, choose] = useSelection()

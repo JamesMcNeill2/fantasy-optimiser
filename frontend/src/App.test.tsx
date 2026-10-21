@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { League, RosterResponse, Team } from './api'
 import App from './App'
+import { ErrorBoundary } from './ErrorBoundary'
 import { deferred, json, settle, setUpBrowserTests, stubFetch, type Routes } from './testHelpers'
 
 setUpBrowserTests()
@@ -208,5 +209,21 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Try Again' }))
     await screen.findByRole('heading', { name: 'Hail Marys' })
     expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('shows a message, not a blank page, when a response has an unexpected shape', async () => {
+    // React logs the caught error; keep the test output clean
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    // An object where the leagues list should be: App itself fails to render,
+    // which only a boundary above App can catch
+    stubFetch(api({ '/api/leagues': () => json({ leagues: LEAGUES }) }))
+    render(
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>,
+    )
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('Something went wrong showing this page.')
   })
 })
