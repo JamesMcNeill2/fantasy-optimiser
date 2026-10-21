@@ -11,6 +11,7 @@ import json
 import logging
 import re
 import time
+from decimal import Decimal
 from types import SimpleNamespace
 
 import httpx
@@ -20,6 +21,8 @@ from app.main import (
     NflWeek,
     Tables,
     WeekGame,
+    avatar_path,
+    clean_int,
     clean_str,
     describe_game,
     get_actual_points,
@@ -48,6 +51,10 @@ USER_5 = "800000000000000005"
 USER_6 = "800000000000000006"
 USER_7 = "800000000000000007"
 SECRET_IDS = (LEAGUE_A, LEAGUE_B, USER_1, USER_2, USER_4, USER_5, USER_6, USER_7)
+
+# Fake avatar uploads, in the shape the batch stores (Sleeper's full URL).
+AVATAR_A = "https://sleepercdn.com/uploads/0a1b2c.jpg"
+AVATAR_B = "https://sleepercdn.com/uploads/3d4e5f.jpeg"
 
 PLAYERS_TABLE = "players-test"
 FAKE_CONFIG = Config(
@@ -180,13 +187,17 @@ USER_ROWS = [
         "user_id": USER_1,
         "display_name": "brad",
         "team_name": " Bravo Ballers ",
+        "avatar": AVATAR_A,
     },
+    # An avatar that isn't a Sleeper upload is never passed on.
     {
         "league_id": LEAGUE_A,
         "user_id": USER_2,
         "display_name": "ann",
         "team_name": "alpha squad",
+        "avatar": "https://example.com/uploads/0a1b2c.jpg",
     },
+    # No avatar attribute: a row stored before the batch added avatars.
     {
         "league_id": LEAGUE_A,
         "user_id": USER_4,
@@ -198,6 +209,7 @@ USER_ROWS = [
         "user_id": USER_5,
         "display_name": "   ",
         "team_name": None,
+        "avatar": None,
     },
     # Left the league: a row but no roster, so never listed.
     {
@@ -205,18 +217,21 @@ USER_ROWS = [
         "user_id": USER_7,
         "display_name": "gus",
         "team_name": "Ghost Team",
+        "avatar": None,
     },
-    # Same user in the other league, with a different team name.
+    # Same user in the other league, with a different team name and avatar.
     {
         "league_id": LEAGUE_B,
         "user_id": USER_1,
         "display_name": "brad",
         "team_name": "Bravo B-Team",
+        "avatar": AVATAR_B,
     },
 ]
 
 
-def player_row(player_id, first, last, position, team, injury_status=None):
+def player_row(player_id, first, last, position, team, injury_status=None, **extra):
+    """A players-table row; extra holds optional attributes such as shirt_number."""
     return {
         "player_id": player_id,
         "first_name": first,
@@ -225,20 +240,27 @@ def player_row(player_id, first, last, position, team, injury_status=None):
         "team": team,
         "injury_status": injury_status,
         "refreshed_at": "2026-10-11T03:00:00+00:00",
+        **extra,
     }
 
 
-# 1003 has no row (signed after the batch run).
+# 1003 has no row (signed after the batch run). Shirt numbers are Decimals, as
+# DynamoDB returns them. 1004 wears 0, which must survive as 0, not None; 1007's
+# row predates shirt numbers (no attribute); 1008's is stored as null.
 PLAYER_ROWS = {
-    "1001": player_row("1001", "Quinn", "Back", "QB", "KC"),
-    "1002": player_row("1002", "Ray", "Byeweek", "RB", "PHI"),
-    "1004": player_row("1004", " Wade ", " Receiver ", "WR", "NYG", ""),
-    "1005": player_row("1005", "Ted", "Endly", "TE", "LV"),
-    "1006": player_row("1006", "Ira", "Reserve", "RB", "NE", "IR"),
+    "1001": player_row("1001", "Quinn", "Back", "QB", "KC", shirt_number=Decimal(15)),
+    "1002": player_row("1002", "Ray", "Byeweek", "RB", "PHI", shirt_number=Decimal(22)),
+    "1004": player_row(
+        "1004", " Wade ", " Receiver ", "WR", "NYG", "", shirt_number=Decimal(0)
+    ),
+    "1005": player_row("1005", "Ted", "Endly", "TE", "LV", shirt_number=Decimal(87)),
+    "1006": player_row(
+        "1006", "Ira", "Reserve", "RB", "NE", "IR", shirt_number=Decimal(31)
+    ),
     "1007": player_row("1007", "Otto", "Out", "WR", "BUF", "Out"),
-    "1008": player_row("1008", "Kurt", "Freeagent", "K", None),
-    "1009": player_row("1009", "Cal", "Celled", "WR", "MIA"),
-    "2001": player_row("2001", "Bea", "Other", "TE", "DAL"),
+    "1008": player_row("1008", "Kurt", "Freeagent", "K", None, shirt_number=None),
+    "1009": player_row("1009", "Cal", "Celled", "WR", "MIA", shirt_number=Decimal(11)),
+    "2001": player_row("2001", "Bea", "Other", "TE", "DAL", shirt_number=Decimal(85)),
 }
 
 # Missing IDs get Sleeper's null (bye, Out, IR).
@@ -471,6 +493,53 @@ def sleeps(monkeypatch):
 )
 def test_clean_str(value, expected):
     assert clean_str(value) == expected
+
+
+# --- clean_int -----------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        pytest.param(Decimal(15), 15, id="decimal"),
+        pytest.param(Decimal(0), 0, id="decimal-zero"),
+        pytest.param(Decimal("7.0"), 7, id="decimal-whole-with-point"),
+        pytest.param(7, 7, id="int"),
+        pytest.param(Decimal("7.5"), None, id="decimal-fraction"),
+        pytest.param(Decimal("NaN"), None, id="decimal-nan"),
+        pytest.param(Decimal("Infinity"), None, id="decimal-infinity"),
+        pytest.param(7.0, None, id="float"),
+        pytest.param("15", None, id="string"),
+        pytest.param(True, None, id="bool"),
+        pytest.param(None, None, id="none"),
+    ],
+)
+def test_clean_int(value, expected):
+    result = clean_int(value)
+
+    assert result == expected
+    if expected is not None:
+        assert type(result) is int  # Decimal(15) == 15, so == alone can't prove int()
+
+
+# --- avatar_path ---------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        pytest.param(AVATAR_A, "/avatars/0a1b2c.jpg", id="jpg"),
+        pytest.param(AVATAR_B, "/avatars/3d4e5f.jpeg", id="jpeg"),
+        pytest.param("https://example.com/uploads/0a1b2c.jpg", None, id="other-host"),
+        pytest.param(
+            "https://sleepercdn.com/uploads/../0a1b2c.jpg", None, id="traversal"
+        ),
+        pytest.param("", None, id="empty"),
+        pytest.param(None, None, id="none"),
+    ],
+)
+def test_avatar_path(value, expected):
+    assert avatar_path(value) == expected
 
 
 # --- describe_game -------------------------------------------------------------
@@ -842,11 +911,8 @@ def test_get_players_single_attempt_warns_about_leftovers(sleeps, caplog):
 # --- get_roster_positions ------------------------------------------------------
 
 
-def test_get_roster_positions_returns_the_leagues_layout(sleeper):
-    with sleeper.client() as client:
-        assert get_roster_positions(client, LEAGUE_A) == LAYOUT_A
-
-    assert sleeper.requests == [f"{BASE_URL}/league/{LEAGUE_A}"]
+def test_get_roster_positions_returns_the_leagues_layout():
+    assert get_roster_positions(LEAGUES[LEAGUE_A]) == LAYOUT_A
 
 
 @pytest.mark.parametrize(
@@ -858,15 +924,11 @@ def test_get_roster_positions_returns_the_leagues_layout(sleeper):
         pytest.param({"roster_positions": {"QB": 1}}, id="dict"),
         pytest.param({"roster_positions": ["QB", 3, "RB"]}, id="int-item"),
         pytest.param({"roster_positions": ["QB", None]}, id="null-item"),
-        pytest.param([LAYOUT_A], id="league-not-a-dict"),
     ],
 )
 def test_get_roster_positions_bad_shape_raises_502(league, caplog):
-    with (
-        make_client(200, league) as client,
-        pytest.raises(HTTPException) as exc_info,
-    ):
-        get_roster_positions(client, LEAGUE_A)
+    with pytest.raises(HTTPException) as exc_info:
+        get_roster_positions(league)
 
     assert_502(exc_info)
     assert errors_in(caplog)
@@ -992,21 +1054,38 @@ def test_list_teams_names_and_order(api):
     assert response.status_code == 200
     # Case-insensitive order: plain sorting would put "Bravo" before "alpha".
     assert response.json() == [
-        {"roster_id": 2, "team_name": "alpha squad"},
-        {"roster_id": 1, "team_name": "Bravo Ballers"},  # stripped
-        {"roster_id": 3, "team_name": "Team 3"},  # no owner
-        {"roster_id": 5, "team_name": "Team 5"},  # blank team and display name
-        {"roster_id": 6, "team_name": "Team 6"},  # owner has no users row yet
-        {"roster_id": 4, "team_name": "Team Dana"},  # blank team name
+        {"roster_id": 2, "team_name": "alpha squad", "avatar": None},  # not Sleeper's
+        {
+            "roster_id": 1,
+            "team_name": "Bravo Ballers",  # stripped
+            "avatar": "/avatars/0a1b2c.jpg",
+        },
+        {"roster_id": 3, "team_name": "Team 3", "avatar": None},  # no owner
+        # blank team and display name; avatar stored as null
+        {"roster_id": 5, "team_name": "Team 5", "avatar": None},
+        # owner has no users row yet
+        {"roster_id": 6, "team_name": "Team 6", "avatar": None},
+        # blank team name; row stored before avatars, so no attribute
+        {"roster_id": 4, "team_name": "Team Dana", "avatar": None},
     ]
     assert "Ghost Team" not in response.text  # a users row without a roster
     assert_no_ids(response)
 
 
+def test_list_teams_never_returns_sleepers_avatar_urls(api):
+    # Only the site's own /avatars/ path, so browsers never contact Sleeper.
+    response = api.get("/api/leagues/0/teams")
+
+    assert "sleepercdn" not in response.text
+    assert "example.com" not in response.text
+
+
 def test_list_teams_uses_the_selected_leagues_users(api):
     response = api.get("/api/leagues/1/teams")
 
-    assert response.json() == [{"roster_id": 1, "team_name": "Bravo B-Team"}]
+    assert response.json() == [
+        {"roster_id": 1, "team_name": "Bravo B-Team", "avatar": "/avatars/3d4e5f.jpeg"}
+    ]
 
 
 # --- GET /api/leagues/{league_key}/teams/{roster_id}/roster --------------------
@@ -1059,6 +1138,7 @@ def test_get_roster_player_fields(api):
         "reserve": False,
         "first_name": "Wade",
         "last_name": "Receiver",
+        "shirt_number": 0,
         "position": "WR",
         "team": "NYG",
         "injury_status": None,
@@ -1074,6 +1154,7 @@ def test_get_roster_player_fields(api):
         "reserve": False,
         "first_name": None,
         "last_name": None,
+        "shirt_number": None,
         "position": None,
         "team": None,
         "injury_status": None,
@@ -1085,6 +1166,25 @@ def test_get_roster_player_fields(api):
     }
 
 
+def test_get_roster_shirt_numbers(api):
+    players = api.get(ROSTER_URL).json()["players"]
+
+    numbers = {p["player_id"]: p["shirt_number"] for p in players}
+    assert numbers == {
+        "1001": 15,
+        "1002": 22,
+        "1003": None,  # no DynamoDB row
+        "1004": 0,  # a real shirt number, not a missing one
+        "1005": 87,
+        "1006": 31,
+        "1007": None,  # row stored before shirt numbers
+        "1008": None,  # stored as null
+        "1009": 11,
+    }
+    # Whole numbers in the JSON (15, not 15.0), so the frontend shows "#15".
+    assert '"shirt_number":15,' in api.get(ROSTER_URL).text
+
+
 def test_get_roster_actual_points(api):
     players = api.get(ROSTER_URL).json()["players"]
 
@@ -1093,6 +1193,78 @@ def test_get_roster_actual_points(api):
     assert actual["1005"] == 4.0  # locked bench player
     assert actual["1007"] == 0.0  # Sleeper's whole-number 0
     assert all(type(points) is float for points in actual.values())
+
+
+def test_get_roster_names(api, users_table):
+    response = api.get(ROSTER_URL)
+
+    body = response.json()
+    assert body["league_name"] == "Test League A"  # stripped
+    assert body["team_name"] == "Bravo Ballers"  # stripped
+    assert len(users_table.queries) == 1
+    assert_no_ids(response)
+
+
+@pytest.mark.parametrize(
+    ("url", "league_name", "team_name"),
+    [
+        pytest.param(
+            "/api/leagues/1/teams/1/roster",
+            "League 2",
+            "Bravo B-Team",
+            id="blank-league-name-and-the-selected-leagues-users",
+        ),
+        pytest.param(
+            "/api/leagues/0/teams/3/roster", "Test League A", "Team 3", id="no-owner"
+        ),
+        pytest.param(
+            "/api/leagues/0/teams/4/roster",
+            "Test League A",
+            "Team Dana",
+            id="blank-team-name",
+        ),
+        pytest.param(
+            "/api/leagues/0/teams/6/roster",
+            "Test League A",
+            "Team 6",
+            id="no-users-row",
+        ),
+    ],
+)
+def test_get_roster_name_fallbacks(api, sleeper, url, league_name, team_name):
+    # Rosters 4 and 6 have no players, so their starters list is empty.
+    response = api.get(url)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert (body["league_name"], body["team_name"]) == (league_name, team_name)
+
+
+@pytest.mark.parametrize(
+    ("url", "team_avatar"),
+    [
+        pytest.param(ROSTER_URL, "/avatars/0a1b2c.jpg", id="sleeper-upload"),
+        pytest.param(
+            "/api/leagues/1/teams/1/roster",
+            "/avatars/3d4e5f.jpeg",
+            id="the-selected-leagues-users",
+        ),
+        pytest.param("/api/leagues/0/teams/2/roster", None, id="not-a-sleeper-upload"),
+        pytest.param("/api/leagues/0/teams/3/roster", None, id="no-owner"),
+        pytest.param("/api/leagues/0/teams/4/roster", None, id="no-avatar-attribute"),
+        pytest.param("/api/leagues/0/teams/5/roster", None, id="avatar-stored-as-null"),
+        pytest.param("/api/leagues/0/teams/6/roster", None, id="no-users-row"),
+    ],
+)
+def test_get_roster_team_avatar(api, url, team_avatar):
+    response = api.get(url)
+
+    assert response.status_code == 200
+    assert response.json()["team_avatar"] == team_avatar
+    # Only the site's own /avatars/ path, so browsers never contact Sleeper.
+    assert "sleepercdn" not in response.text
+    assert "example.com" not in response.text
+    assert_no_ids(response)
 
 
 def test_get_roster_lineup(api):
@@ -1118,6 +1290,7 @@ def test_get_roster_lineup(api):
 def test_get_roster_calls_sleeper_in_order(api, sleeper):
     api.get(ROSTER_URL)
 
+    # The league is fetched once, for both its slot layout and its name.
     assert sleeper.requests[:5] == [
         f"{BASE_URL}/league/{LEAGUE_A}/rosters",
         f"{BASE_URL}/league/{LEAGUE_A}",
@@ -1196,6 +1369,19 @@ def test_get_roster_bad_layout_is_502_before_the_week_is_fetched(
     assert dynamodb.calls == []
 
 
+def test_get_roster_league_not_a_dict_is_502_before_the_week_is_fetched(
+    api, sleeper, dynamodb
+):
+    sleeper.leagues[LEAGUE_A] = [LAYOUT_A]  # type: ignore
+
+    response = api.get(ROSTER_URL)
+
+    assert response.status_code == 502
+    assert response.json() == {"detail": "Sleeper request failed"}
+    assert not any(url.endswith("/state/nfl") for url in sleeper.requests)
+    assert dynamodb.calls == []
+
+
 def test_get_roster_known_slot_types_do_not_warn(api, caplog):
     api.get(ROSTER_URL)
 
@@ -1243,13 +1429,16 @@ def test_get_roster_failing_matchups_is_502_before_dynamodb(api, sleeper, dynamo
     assert dynamodb.calls == []
 
 
-def test_get_roster_unknown_team_is_404_before_any_other_call(api, sleeper, dynamodb):
+def test_get_roster_unknown_team_is_404_before_any_other_call(
+    api, sleeper, dynamodb, users_table
+):
     response = api.get("/api/leagues/0/teams/99/roster")
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Team not found"}
     assert len(sleeper.requests) == 1  # the rosters fetch only
     assert dynamodb.calls == []
+    assert users_table.queries == []
 
 
 def test_get_roster_one_failing_projection_is_502(api, sleeper):

@@ -4,6 +4,7 @@ import logging
 import time
 from collections.abc import Iterator, Mapping
 from concurrent.futures import ThreadPoolExecutor
+from decimal import Decimal
 from typing import TYPE_CHECKING, Annotated, NamedTuple
 
 import boto3
@@ -12,6 +13,7 @@ from boto3.dynamodb.conditions import Key
 from fastapi import APIRouter, Depends, FastAPI, HTTPException
 from mangum import Mangum
 from pydantic import BaseModel, ConfigDict
+from shared.avatars import AVATARS_FOLDER, avatar_file
 from shared.config import Config, load_config
 from shared.logs import configure_logging
 from shared.optimiser import (
@@ -108,10 +110,12 @@ class Team(ResponseModel):
     Attributes:
         roster_id: The Sleeper roster identifier.
         team_name: The display name for the team.
+        avatar: The site path of the team's avatar, when it has one.
     """
 
     roster_id: int
     team_name: str
+    avatar: str | None = None
 
 
 class RosterPlayer(ResponseModel):
@@ -123,6 +127,7 @@ class RosterPlayer(ResponseModel):
         reserve: Whether the player is in the reserve list.
         first_name: The player's first name when available.
         last_name: The player's last name when available.
+        shirt_number: The player's shirt number when available.
         position: The player's position.
         team: The player's team abbreviation.
         injury_status: The player's injury status.
@@ -138,6 +143,7 @@ class RosterPlayer(ResponseModel):
     reserve: bool
     first_name: str | None = None
     last_name: str | None = None
+    shirt_number: int | None = None
     position: str | None = None
     team: str | None = None
     injury_status: str | None = None
@@ -173,6 +179,9 @@ class RosterResponse(ResponseModel):
     """A roster response containing all players for a team.
 
     Attributes:
+        league_name: The display name for the league.
+        team_name: The display name for the team.
+        team_avatar: The site path of the team's avatar, when it has one.
         players: The rostered players for the team.
         season: The season identifier for the roster data.
         week: The week number for the roster data.
@@ -180,6 +189,9 @@ class RosterResponse(ResponseModel):
         lineup: The optimal lineup evaluation for the roster.
     """
 
+    league_name: str
+    team_name: str
+    team_avatar: str | None = None
     players: list[RosterPlayer]
     season: str
     week: int
@@ -295,6 +307,92 @@ def clean_str(value: object) -> str | None:
     if not isinstance(value, str):
         return None
     return value.strip() or None
+
+
+def clean_int(value: object) -> int | None:
+    """Normalize a whole-number field, such as a number read from DynamoDB.
+
+    DynamoDB returns numbers as Decimal.
+
+    Args:
+        value: The value to normalize.
+
+    Returns:
+        int | None: The whole number, or None when the value isn't one.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if (
+        isinstance(value, Decimal)
+        and value.is_finite()
+        and value == value.to_integral_value()
+    ):
+        return int(value)
+    return None
+
+
+def avatar_path(value: object) -> str | None:
+    """Return the site path of a stored team avatar.
+
+    Args:
+        value: The stored avatar value, normally a Sleeper upload URL.
+
+    Returns:
+        str | None: A path such as "/avatars/1a2b3c.jpg", or None when the
+            value isn't a Sleeper upload URL with a safe file name.
+    """
+    name = avatar_file(value)
+    return f"/{AVATARS_FOLDER}/{name}" if name else None
+
+
+def display_league_name(league: dict, league_key: int) -> str:
+    """Return a league's display name, falling back to its position.
+
+    Args:
+        league: The league payload from Sleeper.
+        league_key: The zero-based index of the league.
+
+    Returns:
+        str: The league's name, or "League N" when it has none.
+    """
+    return clean_str(league.get("name")) or f"League {league_key + 1}"
+
+
+def get_users_by_id(tables: Tables, league_id: str) -> dict[str, dict]:
+    """Load a league's users from DynamoDB, keyed by user ID.
+
+    Args:
+        tables: The configured DynamoDB tables.
+        league_id: The Sleeper league identifier.
+
+    Returns:
+        dict[str, dict]: The league's user items by user ID.
+    """
+    response = tables.users.query(KeyConditionExpression=Key("league_id").eq(league_id))
+    return {str(item["user_id"]): item for item in response["Items"]}
+
+
+def resolve_team_name(roster_id: int, user: dict | None) -> str:
+    """Return a team's display name.
+
+    Args:
+        roster_id: The Sleeper roster identifier.
+        user: The roster owner's user item, if found.
+
+    Returns:
+        str: The team name, else "Team <owner's display name>", else
+            "Team <roster ID>".
+    """
+    if user is not None:
+        team_name = clean_str(user.get("team_name"))
+        if team_name is not None:
+            return team_name
+        display_name = clean_str(user.get("display_name"))
+        if display_name is not None:
+            return f"Team {display_name}"
+    return f"Team {roster_id}"
 
 
 def fetch_rosters(client: httpx.Client, league_id: str) -> list:
@@ -518,12 +616,11 @@ def get_projections(
         return dict(zip(player_ids, points))
 
 
-def get_roster_positions(client: httpx.Client, league_id: str) -> list[str]:
-    """Fetch the roster slot ordering for a Sleeper league.
+def get_roster_positions(league: dict) -> list[str]:
+    """Read the roster slot ordering from a league payload.
 
     Args:
-        client: The HTTP client used to query Sleeper.
-        league_id: The Sleeper league identifier.
+        league: The league payload from Sleeper.
 
     Returns:
         list[str]: The ordered roster positions defined by the league.
@@ -533,7 +630,6 @@ def get_roster_positions(client: httpx.Client, league_id: str) -> list[str]:
     """
     # Get the league specific roster slot order
     # Eg. ["QB", "RB", "RB", "WR", "WR", "TE", "WRRB_FLEX", "K", "DEF", "BN", "BN", "BN", "BN", "BN", "BN"]
-    league = fetch_sleeper(client, LEAGUE_PATH.format(league_id=league_id), dict)
     roster_positions = league.get("roster_positions")
 
     # Check roster_positions is a list
@@ -653,7 +749,7 @@ def list_leagues(
         league_data = fetch_sleeper(
             client, LEAGUE_PATH.format(league_id=league_id), dict
         )
-        name = clean_str(league_data.get("name")) or f"League {key + 1}"
+        name = display_league_name(league_data, key)
         leagues.append(League(key=key, name=name))
 
     return leagues
@@ -677,23 +773,20 @@ def list_teams(
     """
     # Acquire the rosters
     rosters = fetch_rosters(client, league_id)
-    response = tables.users.query(KeyConditionExpression=Key("league_id").eq(league_id))
-    items = response["Items"]
-    users_by_id = {item["user_id"]: item for item in items}
+    users_by_id = get_users_by_id(tables, league_id)
 
     # Resolve team names in each league
     teams = []
     for roster in rosters:
         roster_id = roster["roster_id"]
         user = users_by_id.get(roster.get("owner_id"))
-        team_name = clean_str(user.get("team_name")) if user else None
-        display_name = clean_str(user.get("display_name")) if user else None
-        if team_name is None:
-            if display_name is not None:
-                team_name = f"Team {display_name}"
-            else:
-                team_name = f"Team {roster_id}"
-        teams.append(Team(roster_id=roster_id, team_name=team_name))
+        teams.append(
+            Team(
+                roster_id=roster_id,
+                team_name=resolve_team_name(roster_id, user),
+                avatar=avatar_path(user.get("avatar")) if user else None,
+            )
+        )
 
     # Sort teams into alphabetical order
     teams.sort(key=lambda team: team.team_name.casefold())
@@ -702,6 +795,7 @@ def list_teams(
 
 @router.get("/leagues/{league_key}/teams/{roster_id}/roster")
 def get_roster(
+    league_key: int,
     league_id: Annotated[str, Depends(get_league_id)],
     roster_id: int,
     client: Annotated[httpx.Client, Depends(get_sleeper_client)],
@@ -715,6 +809,7 @@ def get_roster(
     runs the lineup optimiser. Locked players keep their slots.
 
     Args:
+        league_key: The zero-based index of the league.
         league_id: The Sleeper league identifier.
         roster_id: The roster identifier to fetch.
         client: The HTTP client used to query Sleeper.
@@ -722,8 +817,8 @@ def get_roster(
         tables: The configured DynamoDB tables.
 
     Returns:
-        RosterResponse: The team's players, the league's starting slot types and
-            the optimal lineup with its totals.
+        RosterResponse: The league and team names, the team's players, the league's
+        starting slot types and the optimal lineup with its totals.
 
     Raises:
         HTTPException: A 404 if the team is not in the league.
@@ -737,6 +832,12 @@ def get_roster(
     if roster is None:
         raise HTTPException(status_code=404, detail="Team not found")
 
+    # Resolve the team's display name and avatar
+    users_by_id = get_users_by_id(tables, league_id)
+    owner = users_by_id.get(roster.get("owner_id"))
+    team_name = resolve_team_name(roster_id, owner)
+    team_avatar = avatar_path(owner.get("avatar")) if owner else None
+
     # Define reserve and starting players
     player_ids = roster.get("players") or []  # players = ["1111"] * 15
     reserve = set(roster.get("reserve") or [])  # reserve = ["2222"]
@@ -747,7 +848,8 @@ def get_roster(
 
     # Get the league appropriate starting positions
     # ["QB", "RB", "RB", "WR", "WR", "TE", "WRRB_FLEX", "K", "DEF", "BN", "BN", "BN", "BN", "BN", "BN"]
-    roster_positions = get_roster_positions(client, league_id)
+    league = fetch_sleeper(client, LEAGUE_PATH.format(league_id=league_id), dict)
+    roster_positions = get_roster_positions(league)
     # positions = ["QB", "RB", "RB", "WR", "WR", "TE", "WRRB_FLEX", "K", "DEF"]
     positions = starting_positions(roster_positions)
 
@@ -800,6 +902,7 @@ def get_roster(
                 reserve=player_id in reserve,
                 first_name=clean_str(details.get("first_name")),
                 last_name=clean_str(details.get("last_name")),
+                shirt_number=clean_int(details.get("shirt_number")),
                 position=clean_str(details.get("position")),
                 team=team,
                 injury_status=clean_str(details.get("injury_status")),
@@ -840,6 +943,9 @@ def get_roster(
 
     # Return the completed roster for a team
     return RosterResponse(
+        league_name=display_league_name(league, league_key),
+        team_name=team_name,
+        team_avatar=team_avatar,
         players=roster_players,
         season=nfl_week.season,
         week=nfl_week.week,

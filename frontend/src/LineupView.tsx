@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react'
+import { Fragment, useId, type CSSProperties, type ReactNode } from 'react'
 import type { RosterPlayer, RosterResponse } from './api'
 import {
   changeVerdict,
@@ -16,6 +16,7 @@ import {
   opponentOf,
   rowState,
   benchOrder,
+  shirtNumberLabel,
 } from './lineup'
 import './LineupView.css'
 import { teamColours } from './nflTeams'
@@ -130,7 +131,7 @@ export function LineupView({ roster }: LineupViewProps) {
   )
 }
 
-// One line in the summary: who to start or bench, and their points.
+// One line in the summary: who to start or sit, and their points.
 function MoveRow({
   action,
   player,
@@ -140,7 +141,7 @@ function MoveRow({
 }) {
   return (
     <li className="move">
-      <span className={`move-action move-${action}`}>{action === 'start' ? 'Start' : 'Bench'}</span>
+      <span className={`move-action move-${action}`}>{action === 'start' ? 'Start' : 'Sit'}</span>
       {player === undefined ? (
         <span className="move-name">Unknown Player</span>
       ) : (
@@ -156,31 +157,62 @@ function MoveRow({
   )
 }
 
-// Position in its colour and the NFL team in theirs, e.g. "QB BUF".
+// Position in its colour, the NFL team in theirs and the shirt number, with a dot
+// between each, e.g. "QB · BUF · #17". Anything missing is left out along with
+// its dot. The dots are decoration, hidden from screen readers.
 function PlayerDetails({ player }: { player: RosterPlayer }) {
+  const shirtNumber = shirtNumberLabel(player)
+  const details: { key: string; content: ReactNode }[] = []
+  if (player.position !== null) {
+    details.push({
+      key: 'position',
+      content: (
+        <span className={`pos-text ${positionClass(player.position)}`}>{player.position}</span>
+      ),
+    })
+  }
+  if (player.team !== null) {
+    details.push({ key: 'team', content: <TeamLabel team={player.team} /> })
+  }
+  if (shirtNumber !== null) {
+    details.push({ key: 'number', content: <span className="shirt-number">{shirtNumber}</span> })
+  }
+
   return (
     <span className="player-details">
-      {player.position !== null && (
-        <span className={`pos-text ${positionClass(player.position)}`}>{player.position}</span>
-      )}
-      {player.team !== null && <TeamLabel team={player.team} />}
+      {details.map(({ key, content }, index) => (
+        <Fragment key={key}>
+          {index > 0 && (
+            <span className="detail-separator" aria-hidden="true">
+              ·
+            </span>
+          )}
+          {content}
+        </Fragment>
+      ))}
     </span>
   )
 }
 
 // An NFL team code on the team's colour, or plain text for an unknown code.
+// The colours go in as custom properties rather than as background and color:
+// an inline style beats any stylesheet rule, and a row that can't help this
+// week swaps them for grey in CSS.
 function TeamLabel({ team }: { team: string }) {
   const colours = teamColours(team)
   if (colours === null) return <span>{team}</span>
+  const style = { '--team-bg': colours.background, '--team-text': colours.text } as CSSProperties
   return (
-    <span className="team-label" style={{ background: colours.background, color: colours.text }}>
+    <span className="team-label" style={style}>
       {team}
     </span>
   )
 }
 
-// The game column: the opponent in their team's colour, or BYE, Cancelled or "-".
+// The fixture column: the opponent in their team's colour, BYE as a violet
+// label to match the row, or Cancelled or "-".
 function GameCell({ player }: { player: RosterPlayer }) {
+  if (player.game_status === 'bye') return <span className="bye-label">{gameLabel(player)}</span>
   const opponent = opponentOf(player)
   if (opponent === null) return <>{gameLabel(player)}</>
   return (
@@ -204,7 +236,7 @@ function PlayerTable({ title, children }: { title: string; children: ReactNode }
             <tr>
               <th scope="col">Slot</th>
               <th scope="col">Player</th>
-              <th scope="col">Game</th>
+              <th scope="col">Fixture</th>
               <th scope="col" className="points">
                 Points
               </th>
@@ -239,7 +271,7 @@ function EmptyRow({ slot }: { slot: string }) {
     <tr className="needs-pickup">
       <SlotCell slot={slot} />
       <td colSpan={3}>
-        Empty <span className="tag tag-pickup">Needs Pickup</span>
+        Empty <span className="tag tag-pickup">Waiver</span>
       </td>
     </tr>
   )
@@ -251,7 +283,7 @@ function PlayerRow({ slot, player, change, needsPickup = false }: PlayerRowProps
   const changeTag = (
     <>
       {change === 'start' && <span className="tag tag-start">Start</span>}
-      {change === 'sit' && <span className="tag tag-sit">Bench</span>}
+      {change === 'sit' && <span className="tag tag-sit">Sit</span>}
     </>
   )
 
@@ -277,9 +309,9 @@ function PlayerRow({ slot, player, change, needsPickup = false }: PlayerRowProps
       <SlotCell slot={slot} />
       <td>
         <span className="player-name">{playerName(player)}</span>
+        {player.locked && <LockIcon />}
         {changeTag}
-        {player.locked && <span className="tag tag-locked">Locked</span>}
-        {needsPickup && <span className="tag tag-pickup">Needs Pickup</span>}
+        {needsPickup && <span className="tag tag-pickup">Waiver</span>}
         <PlayerDetails player={player} />
       </td>
       <td>
@@ -287,5 +319,17 @@ function PlayerRow({ slot, player, change, needsPickup = false }: PlayerRowProps
       </td>
       <td className="points">{pointsLabel(player)}</td>
     </tr>
+  )
+}
+
+// A padlock straight after a locked player's name. The accessible name gives
+// screen readers the same cue the icon gives everyone else; questionable and
+// out will sit here too, once there's a fresh injury source.
+function LockIcon() {
+  return (
+    <svg className="status-icon" viewBox="0 0 16 16" role="img" aria-label="Locked">
+      <path d="M5 7.5V5a3 3 0 0 1 6 0v2.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <rect x="2.5" y="7" width="11" height="8" rx="1.5" fill="currentColor" />
+    </svg>
   )
 }

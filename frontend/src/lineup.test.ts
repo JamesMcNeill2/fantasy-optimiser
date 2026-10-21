@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { OptimalLineup, RosterPlayer } from './api'
+import type { OptimalLineup, RosterPlayer, RosterResponse } from './api'
 import {
   gameLabel,
   lineupChanges,
@@ -17,6 +17,7 @@ import {
   opponentOf,
   rowState,
   benchOrder,
+  shirtNumberLabel,
 } from './lineup'
 
 // A typical unlocked player. Each test overrides only the fields it cares about.
@@ -27,6 +28,7 @@ function player(overrides: Partial<RosterPlayer> = {}): RosterPlayer {
     reserve: false,
     first_name: 'Test',
     last_name: 'Player',
+    shirt_number: null,
     position: 'WR',
     team: 'KC',
     injury_status: null,
@@ -42,6 +44,20 @@ function player(overrides: Partial<RosterPlayer> = {}): RosterPlayer {
 function lineup(starter_ids: (string | null)[]): OptimalLineup {
   return { starter_ids, bench_ids: [], optimal_total: 0, current_total: 0 }
 }
+
+describe('shirtNumberLabel', () => {
+  it('puts a # before the number', () => {
+    expect(shirtNumberLabel(player({ shirt_number: 12 }))).toBe('#12')
+  })
+
+  it('shows #0, a real shirt number', () => {
+    expect(shirtNumberLabel(player({ shirt_number: 0 }))).toBe('#0')
+  })
+
+  it('gives null when there is no number', () => {
+    expect(shirtNumberLabel(player({ shirt_number: null }))).toBeNull()
+  })
+})
 
 describe('selectionValue', () => {
   it('uses the projection', () => {
@@ -249,7 +265,16 @@ describe('slotClass', () => {
 
 describe('weekLabel', () => {
   it('shows the week', () => {
-    const roster = { players: [player()], season: '2026', week: 6, slots: [], lineup: lineup([]) }
+    const roster: RosterResponse = {
+      league_name: 'Test League',
+      team_name: 'Test Team',
+      team_avatar: null,
+      players: [player()],
+      season: '2026',
+      week: 6,
+      slots: [],
+      lineup: lineup([]),
+    }
     expect(weekLabel(roster)).toBe('Week 6')
   })
 })

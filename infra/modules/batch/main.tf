@@ -39,6 +39,18 @@ data "aws_iam_policy_document" "exec" {
   }
 
   statement {
+    sid       = "AvatarObject"
+    actions   = ["s3:GetObject", "s3:PutObject"]
+    resources = ["arn:aws:s3:::${var.avatars_bucket}/avatars/*"]
+  }
+
+  statement {
+    sid       = "AvatarBucketList"
+    actions   = ["s3:ListBucket"]
+    resources = ["arn:aws:s3:::${var.avatars_bucket}"]
+  }
+
+  statement {
     sid       = "WriteLogs"
     effect    = "Allow"
     actions   = ["logs:CreateLogStream", "logs:PutLogEvents"]
@@ -63,9 +75,10 @@ resource "aws_lambda_function" "batch" {
 
   environment {
     variables = {
-      PLAYERS_TABLE = var.players_table_name
-      USERS_TABLE   = var.users_table_name
-      LEAGUE_IDS    = join(",", var.league_ids)
+      PLAYERS_TABLE  = var.players_table_name
+      USERS_TABLE    = var.users_table_name
+      LEAGUE_IDS     = join(",", var.league_ids)
+      AVATARS_BUCKET = var.avatars_bucket
     }
   }
 

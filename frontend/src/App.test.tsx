@@ -1,23 +1,27 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { League, RosterResponse, Team } from './api'
 import App from './App'
+import { ErrorBoundary } from './ErrorBoundary'
 import { deferred, json, settle, setUpBrowserTests, stubFetch, type Routes } from './testHelpers'
 
 setUpBrowserTests()
 
 const LEAGUES: League[] = [
-  { key: 0, name: 'No Punt Intended' },
-  { key: 1, name: 'Any Given Sunday' },
+  { key: 0, name: 'Fourth Down Heroes' },
+  { key: 1, name: 'End Zone Elite' },
 ]
 
 const TEAMS: Team[] = [
-  { roster_id: 3, team_name: 'Bills Bills Bills' },
-  { roster_id: 8, team_name: 'Big boys' },
+  { roster_id: 3, team_name: 'Blitz Brigade', avatar: null },
+  { roster_id: 8, team_name: 'Hail Marys', avatar: null },
 ]
 
 const ROSTER: RosterResponse = {
+  league_name: 'Fourth Down Heroes',
+  team_name: 'Hail Marys',
+  team_avatar: null,
   players: [
     {
       player_id: '1',
@@ -25,6 +29,7 @@ const ROSTER: RosterResponse = {
       reserve: false,
       first_name: 'Sam',
       last_name: 'Starter',
+      shirt_number: 17,
       position: 'QB',
       team: 'BUF',
       injury_status: null,
@@ -67,7 +72,7 @@ describe('App', () => {
     expect(screen.queryByText('Choose Your League')).toBeNull()
 
     // findBy… waits for the element, and fails the test if it never appears
-    await screen.findByRole('heading', { name: 'Big boys' })
+    await screen.findByRole('heading', { name: 'Hail Marys' })
     expect(screen.getByText('Sam Starter')).toBeTruthy()
   })
 
@@ -88,8 +93,8 @@ describe('App', () => {
     expect(screen.getByRole('status').textContent).toBe('Loading lineup…')
 
     teams.resolve(json(TEAMS))
-    await screen.findByRole('heading', { name: 'No Punt Intended' })
-    expect(screen.getByRole('link', { name: 'Big boys' })).toBeTruthy()
+    await screen.findByRole('heading', { name: 'Fourth Down Heroes' })
+    expect(screen.getByRole('link', { name: 'Hail Marys' })).toBeTruthy()
     expect(screen.queryByRole('alert')).toBeNull()
   })
 
@@ -97,19 +102,106 @@ describe('App', () => {
     stubFetch(api())
     render(<App />)
 
-    fireEvent.click(await screen.findByRole('link', { name: 'No Punt Intended' }))
-    const leagueHeading = await screen.findByRole('heading', { name: 'No Punt Intended' })
+    fireEvent.click(await screen.findByRole('link', { name: 'Fourth Down Heroes' }))
+    const leagueHeading = await screen.findByRole('heading', { name: 'Fourth Down Heroes' })
     expect(document.activeElement).toBe(leagueHeading)
     expect(window.location.search).toBe('?league=0')
 
-    fireEvent.click(await screen.findByRole('link', { name: 'Big boys' }))
-    await screen.findByRole('heading', { name: 'Big boys' })
+    fireEvent.click(await screen.findByRole('link', { name: 'Hail Marys' }))
+    await screen.findByRole('heading', { name: 'Hail Marys' })
     expect(window.location.search).toBe('?league=0&team=8')
-    expect(document.title).toBe("Big boys · Mac's Fantasy Lineup Optimiser")
+    expect(document.title).toBe("Hail Marys · Mac's Fantasy Lineup Optimiser")
 
     window.history.back()
-    await screen.findByRole('heading', { name: 'No Punt Intended' })
+    await screen.findByRole('heading', { name: 'Fourth Down Heroes' })
     expect(window.location.search).toBe('?league=0')
+  })
+
+  it('shows the lineup and its header from the roster alone, before either list arrives', async () => {
+    window.history.replaceState(null, '', '/?league=0&team=8')
+    const leagues = deferred<Response>()
+    const teams = deferred<Response>()
+    stubFetch(
+      api({
+        '/api/leagues': () => leagues.promise,
+        '/api/leagues/0/teams': () => teams.promise,
+      }),
+    )
+    render(<App />)
+
+    // The names come from the roster response: neither list has answered
+    await screen.findByRole('heading', { name: 'Hail Marys' })
+    expect(screen.getByRole('link', { name: 'Back to Fourth Down Heroes' })).toBeTruthy()
+    expect(document.title).toBe("Hail Marys · Mac's Fantasy Lineup Optimiser")
+    expect(screen.getByText('Sam Starter')).toBeTruthy()
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it("shows the team's avatar from the roster beside the lineup heading", async () => {
+    window.history.replaceState(null, '', '/?league=0&team=8')
+    stubFetch(
+      api({
+        '/api/leagues/0/teams/8/roster': () =>
+          json({ ...ROSTER, team_avatar: '/avatars/0a1b2c.jpg' }),
+      }),
+    )
+    render(<App />)
+
+    const heading = await screen.findByRole('heading', { name: 'Hail Marys' })
+    const avatar = heading.closest('header')?.querySelector('img')
+    expect(avatar?.getAttribute('src')).toBe('/avatars/0a1b2c.jpg')
+  })
+
+  it('keeps showing the lineup when a list fails', async () => {
+    window.history.replaceState(null, '', '/?league=0&team=8')
+    stubFetch(api({ '/api/leagues': () => json({ detail: 'Sleeper request failed' }, 502) }))
+    render(<App />)
+
+    await screen.findByRole('heading', { name: 'Hail Marys' })
+    await settle()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByText('Sam Starter')).toBeTruthy()
+  })
+
+  it('moves focus to the lineup heading once the roster arrives', async () => {
+    window.history.replaceState(null, '', '/?league=0')
+    const roster = deferred<Response>()
+    stubFetch(api({ '/api/leagues/0/teams/8/roster': () => roster.promise }))
+    render(<App />)
+
+    fireEvent.click(await screen.findByRole('link', { name: 'Hail Marys' }))
+    expect(screen.getByRole('status').textContent).toBe('Loading lineup…')
+
+    roster.resolve(json(ROSTER))
+    const heading = await screen.findByRole('heading', { name: 'Hail Marys' })
+    expect(document.activeElement).toBe(heading)
+  })
+
+  it('shows a refreshed team list and its header together, not the header first', async () => {
+    window.history.replaceState(null, '', '/?league=0')
+    const teams = deferred<Response>()
+    stubFetch(api({ '/api/leagues/0/teams': () => teams.promise }))
+    render(<App />)
+
+    // The leagues list has arrived, but the header waits for the team list
+    await settle()
+    expect(screen.queryByRole('heading', { name: 'Fourth Down Heroes' })).toBeNull()
+    expect(screen.getByRole('status').textContent).toBe('Loading teams…')
+
+    teams.resolve(json(TEAMS))
+    await screen.findByRole('heading', { name: 'Fourth Down Heroes' })
+    expect(screen.getByRole('link', { name: 'Hail Marys' })).toBeTruthy()
+  })
+
+  it('keeps the team list header above its error', async () => {
+    window.history.replaceState(null, '', '/?league=0')
+    stubFetch(
+      api({ '/api/leagues/0/teams': () => json({ detail: 'Sleeper request failed' }, 502) }),
+    )
+    render(<App />)
+
+    await screen.findByRole('alert')
+    expect(screen.getByRole('heading', { name: 'Fourth Down Heroes' })).toBeTruthy()
   })
 
   it('retries every failed request with one Try Again', async () => {
@@ -131,7 +223,23 @@ describe('App', () => {
 
     serverUp = true
     fireEvent.click(screen.getByRole('button', { name: 'Try Again' }))
-    await screen.findByRole('heading', { name: 'Big boys' })
+    await screen.findByRole('heading', { name: 'Hail Marys' })
     expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('shows a message, not a blank page, when a response has an unexpected shape', async () => {
+    // React logs the caught error; keep the test output clean
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    // An object where the leagues list should be: App itself fails to render,
+    // which only a boundary above App can catch
+    stubFetch(api({ '/api/leagues': () => json({ leagues: LEAGUES }) }))
+    render(
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>,
+    )
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('Something went wrong showing this page.')
   })
 })

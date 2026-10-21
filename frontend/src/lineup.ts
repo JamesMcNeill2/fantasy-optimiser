@@ -36,6 +36,13 @@ export function playerName(player: RosterPlayer): string {
   return name === '' ? 'Unknown Player' : name
 }
 
+// The shirt number as shown, e.g. "#1", or null when there isn't one
+// (defences have none). #0 is a real shirt number, so this checks for
+// null, never truthiness.
+export function shirtNumberLabel(player: RosterPlayer): string | null {
+  return player.shirt_number === null ? null : `#${player.shirt_number}`
+}
+
 // The opposing team when there's a game to play, or null on a bye, for a
 // cancelled game, or when the game is unknown.
 export function opponentOf(player: RosterPlayer): string | null {
@@ -43,7 +50,7 @@ export function opponentOf(player: RosterPlayer): string | null {
   return player.opponent
 }
 
-// The game column. "BYE" comes from game_status, never from a missing
+// The fixture column. "BYE" comes from game_status, never from a missing
 // projection, which can mean other things (e.g. an injured player).
 export function gameLabel(player: RosterPlayer): string {
   if (player.game_status === 'bye') return 'BYE'

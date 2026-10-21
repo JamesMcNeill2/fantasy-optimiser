@@ -19,8 +19,8 @@ describe('initials', () => {
   })
 
   it('takes three initials when asked', () => {
-    expect(initials('No Punt Intended', 3)).toBe('NPI')
-    expect(initials('Any Given Sunday', 3)).toBe('AGS')
+    expect(initials('Fourth Down Heroes', 3)).toBe('FDH')
+    expect(initials('End Zone Elite', 3)).toBe('EZE')
   })
 
   it('takes three letters from a one-word name when asked', () => {
@@ -48,7 +48,9 @@ describe('badgeIndex', () => {
 
 describe('badgeIndexes', () => {
   it('gives names that would share a colour different ones', () => {
-    const [first, second] = badgeIndexes(['No Punt Intended', 'Any Given Sunday'])
+    // Both names hash to the same colour on their own, or this test proves nothing
+    expect(badgeIndex('Fourth Down Heroes')).toBe(badgeIndex('End Zone Elite'))
+    const [first, second] = badgeIndexes(['Fourth Down Heroes', 'End Zone Elite'])
     expect(first).not.toBe(second)
   })
 
@@ -58,7 +60,7 @@ describe('badgeIndexes', () => {
   })
 
   it('gives the same list the same colours every time', () => {
-    const names = ['Big boys', 'Bills Bills Bills', 'Christ no McCalfInjury']
+    const names = ['Hail Marys', 'Blitz Brigade', 'Pocket Passers']
     expect(badgeIndexes(names)).toEqual(badgeIndexes(names))
   })
 })

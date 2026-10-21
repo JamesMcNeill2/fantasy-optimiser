@@ -98,18 +98,9 @@
     "/api/leagues/{league_key}/teams/{roster_id}/roster": {
       "get": {
         "summary": "Get Roster",
-        "description": "Return a team's roster, current-game details and optimal lineup.\n\nFetches the league's slot layout, this week's games and actual points from\nSleeper, player details from DynamoDB and projections from Sleeper, then\nruns the lineup optimiser. Locked players keep their slots.\n\nArgs:\n    league_id: The Sleeper league identifier.\n    roster_id: The roster identifier to fetch.\n    client: The HTTP client used to query Sleeper.\n    dynamodb: The DynamoDB resource used for player metadata lookups.\n    tables: The configured DynamoDB tables.\n\nReturns:\n    RosterResponse: The team's players, the league's starting slot types and\n        the optimal lineup with its totals.\n\nRaises:\n    HTTPException: A 404 if the team is not in the league.\n    HTTPException: A 502 if a Sleeper request fails or returns unexpected\n        data, including a slot layout that doesn't match the roster's\n        starters.",
+        "description": "Return a team's roster, current-game details and optimal lineup.\n\nFetches the league's slot layout, this week's games and actual points from\nSleeper, player details from DynamoDB and projections from Sleeper, then\nruns the lineup optimiser. Locked players keep their slots.\n\nArgs:\n    league_key: The zero-based index of the league.\n    league_id: The Sleeper league identifier.\n    roster_id: The roster identifier to fetch.\n    client: The HTTP client used to query Sleeper.\n    dynamodb: The DynamoDB resource used for player metadata lookups.\n    tables: The configured DynamoDB tables.\n\nReturns:\n    RosterResponse: The league and team names, the team's players, the league's\n    starting slot types and the optimal lineup with its totals.\n\nRaises:\n    HTTPException: A 404 if the team is not in the league.\n    HTTPException: A 502 if a Sleeper request fails or returns unexpected\n        data, including a slot layout that doesn't match the roster's\n        starters.",
         "operationId": "get_roster_api_leagues__league_key__teams__roster_id__roster_get",
         "parameters": [
-          {
-            "name": "roster_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Roster Id"
-            }
-          },
           {
             "name": "league_key",
             "in": "path",
@@ -117,6 +108,15 @@
             "schema": {
               "type": "integer",
               "title": "League Key"
+            }
+          },
+          {
+            "name": "roster_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Roster Id"
             }
           }
         ],
@@ -264,6 +264,17 @@
             ],
             "title": "Last Name"
           },
+          "shirt_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shirt Number"
+          },
           "position": {
             "anyOf": [
               {
@@ -354,6 +365,7 @@
           "reserve",
           "first_name",
           "last_name",
+          "shirt_number",
           "position",
           "team",
           "injury_status",
@@ -364,10 +376,29 @@
           "actual_points"
         ],
         "title": "RosterPlayer",
-        "description": "A single player entry from a roster response.\n\nAttributes:\n    player_id: The Sleeper player identifier.\n    starter_slot: The starter slot index when the player is active.\n    reserve: Whether the player is in the reserve list.\n    first_name: The player's first name when available.\n    last_name: The player's last name when available.\n    position: The player's position.\n    team: The player's team abbreviation.\n    injury_status: The player's injury status.\n    projected_points: The projected points for the week.\n    opponent: The player's opponent for the week.\n    game_status: The current game state.\n    locked: Whether the player is in a locked game state.\n    actual_points: The player's points scored in the current week, when available."
+        "description": "A single player entry from a roster response.\n\nAttributes:\n    player_id: The Sleeper player identifier.\n    starter_slot: The starter slot index when the player is active.\n    reserve: Whether the player is in the reserve list.\n    first_name: The player's first name when available.\n    last_name: The player's last name when available.\n    shirt_number: The player's shirt number when available.\n    position: The player's position.\n    team: The player's team abbreviation.\n    injury_status: The player's injury status.\n    projected_points: The projected points for the week.\n    opponent: The player's opponent for the week.\n    game_status: The current game state.\n    locked: Whether the player is in a locked game state.\n    actual_points: The player's points scored in the current week, when available."
       },
       "RosterResponse": {
         "properties": {
+          "league_name": {
+            "type": "string",
+            "title": "League Name"
+          },
+          "team_name": {
+            "type": "string",
+            "title": "Team Name"
+          },
+          "team_avatar": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Avatar"
+          },
           "players": {
             "items": {
               "$ref": "#/components/schemas/RosterPlayer"
@@ -396,6 +427,9 @@
         },
         "type": "object",
         "required": [
+          "league_name",
+          "team_name",
+          "team_avatar",
           "players",
           "season",
           "week",
@@ -403,7 +437,7 @@
           "lineup"
         ],
         "title": "RosterResponse",
-        "description": "A roster response containing all players for a team.\n\nAttributes:\n    players: The rostered players for the team.\n    season: The season identifier for the roster data.\n    week: The week number for the roster data.\n    slots: The ordered starting lineup positions for the league.\n    lineup: The optimal lineup evaluation for the roster."
+        "description": "A roster response containing all players for a team.\n\nAttributes:\n    league_name: The display name for the league.\n    team_name: The display name for the team.\n    team_avatar: The site path of the team's avatar, when it has one.\n    players: The rostered players for the team.\n    season: The season identifier for the roster data.\n    week: The week number for the roster data.\n    slots: The ordered starting lineup positions for the league.\n    lineup: The optimal lineup evaluation for the roster."
       },
       "Team": {
         "properties": {
@@ -414,15 +448,27 @@
           "team_name": {
             "type": "string",
             "title": "Team Name"
+          },
+          "avatar": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar"
           }
         },
         "type": "object",
         "required": [
           "roster_id",
-          "team_name"
+          "team_name",
+          "avatar"
         ],
         "title": "Team",
-        "description": "A team summary within a league.\n\nAttributes:\n    roster_id: The Sleeper roster identifier.\n    team_name: The display name for the team."
+        "description": "A team summary within a league.\n\nAttributes:\n    roster_id: The Sleeper roster identifier.\n    team_name: The display name for the team.\n    avatar: The site path of the team's avatar, when it has one."
       },
       "ValidationError": {
         "properties": {
