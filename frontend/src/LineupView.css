@@ -174,13 +174,25 @@
   font-weight: 600;
 }
 
-/* Position and NFL team, under the player's name */
+/* Shirt number, position and NFL team, under the player's name */
 .player-details {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   margin-top: 0.125rem;
   font-size: 0.8125rem;
+  gap: 0.3rem;
+}
+
+/* The shirt number and the dots between details: quieter than the position
+   and team beside them */
+.shirt-number,
+.detail-separator {
+  color: var(--muted);
+}
+
+.shirt-number {
+  font-weight: 600;
 }
 
 /* In the summary, the name and details stack in the middle column */

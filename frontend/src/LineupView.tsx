@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react'
+import { Fragment, useId, type ReactNode } from 'react'
 import type { RosterPlayer, RosterResponse } from './api'
 import {
   changeVerdict,
@@ -16,6 +16,7 @@ import {
   opponentOf,
   rowState,
   benchOrder,
+  shirtNumberLabel,
 } from './lineup'
 import './LineupView.css'
 import { teamColours } from './nflTeams'
@@ -156,14 +157,39 @@ function MoveRow({
   )
 }
 
-// Position in its colour and the NFL team in theirs, e.g. "QB BUF".
+// Shirt number, position in its colour and the NFL team in theirs, with a dot
+// between each, e.g. "QB · BUF · #17". Anything missing is left out along with
+// its dot. The dots are decoration, hidden from screen readers.
 function PlayerDetails({ player }: { player: RosterPlayer }) {
+  const shirtNumber = shirtNumberLabel(player)
+  const details: { key: string; content: ReactNode }[] = []
+  if (player.position !== null) {
+    details.push({
+      key: 'position',
+      content: (
+        <span className={`pos-text ${positionClass(player.position)}`}>{player.position}</span>
+      ),
+    })
+  }
+  if (player.team !== null) {
+    details.push({ key: 'team', content: <TeamLabel team={player.team} /> })
+  }
+  if (shirtNumber !== null) {
+    details.push({ key: 'number', content: <span className="shirt-number">{shirtNumber}</span> })
+  }
+
   return (
     <span className="player-details">
-      {player.position !== null && (
-        <span className={`pos-text ${positionClass(player.position)}`}>{player.position}</span>
-      )}
-      {player.team !== null && <TeamLabel team={player.team} />}
+      {details.map(({ key, content }, index) => (
+        <Fragment key={key}>
+          {index > 0 && (
+            <span className="detail-separator" aria-hidden="true">
+              ·
+            </span>
+          )}
+          {content}
+        </Fragment>
+      ))}
     </span>
   )
 }

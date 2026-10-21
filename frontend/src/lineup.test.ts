@@ -17,6 +17,7 @@ import {
   opponentOf,
   rowState,
   benchOrder,
+  shirtNumberLabel,
 } from './lineup'
 
 // A typical unlocked player. Each test overrides only the fields it cares about.
@@ -43,6 +44,20 @@ function player(overrides: Partial<RosterPlayer> = {}): RosterPlayer {
 function lineup(starter_ids: (string | null)[]): OptimalLineup {
   return { starter_ids, bench_ids: [], optimal_total: 0, current_total: 0 }
 }
+
+describe('shirtNumberLabel', () => {
+  it('puts a # before the number', () => {
+    expect(shirtNumberLabel(player({ shirt_number: 12 }))).toBe('#12')
+  })
+
+  it('shows #0, a real shirt number', () => {
+    expect(shirtNumberLabel(player({ shirt_number: 0 }))).toBe('#0')
+  })
+
+  it('gives null when there is no number', () => {
+    expect(shirtNumberLabel(player({ shirt_number: null }))).toBeNull()
+  })
+})
 
 describe('selectionValue', () => {
   it('uses the projection', () => {

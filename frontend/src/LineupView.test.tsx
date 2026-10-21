@@ -39,6 +39,7 @@ const ROSTER: RosterResponse = {
       starter_slot: 0,
       first_name: 'Lou',
       last_name: 'Locked',
+      shirt_number: 0,
       position: 'QB',
       locked: true,
       game_status: 'in_game',
@@ -132,5 +133,35 @@ describe('LineupView: columns', () => {
     // Starters and Bench (no one is on injured reserve)
     expect(screen.getAllByRole('columnheader', { name: 'Fixture' })).toHaveLength(2)
     expect(screen.queryByRole('columnheader', { name: 'Game' })).toBeNull()
+  })
+})
+
+// The details line under a player's name.
+function detailsOf(name: string): HTMLElement {
+  const details = rowOf(name).querySelector<HTMLElement>('.player-details')
+  if (details === null) throw new Error(`No details line for ${name}`)
+  return details
+}
+
+describe('LineupView: player details', () => {
+  it('shows the shirt number, position and team with a dot between each', () => {
+    render(<LineupView roster={ROSTER} />)
+
+    // #0 is a real shirt number, not a missing one
+    expect(detailsOf('Lou Locked').textContent).toBe('QB·KC·#0')
+  })
+
+  it('leaves out a missing shirt number along with its dot', () => {
+    render(<LineupView roster={ROSTER} />)
+
+    expect(detailsOf('Pat Pending').textContent).toBe('RB·KC')
+  })
+
+  it('hides the dots from screen readers', () => {
+    render(<LineupView roster={ROSTER} />)
+
+    const dots = [...detailsOf('Lou Locked').children].filter((child) => child.textContent === '·')
+    expect(dots).toHaveLength(2)
+    for (const dot of dots) expect(dot.getAttribute('aria-hidden')).toBe('true')
   })
 })
