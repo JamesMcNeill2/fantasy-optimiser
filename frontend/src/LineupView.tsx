@@ -1,4 +1,4 @@
-import { Fragment, useId, type ReactNode } from 'react'
+import { Fragment, useId, type CSSProperties, type ReactNode } from 'react'
 import type { RosterPlayer, RosterResponse } from './api'
 import {
   changeVerdict,
@@ -195,11 +195,15 @@ function PlayerDetails({ player }: { player: RosterPlayer }) {
 }
 
 // An NFL team code on the team's colour, or plain text for an unknown code.
+// The colours go in as custom properties rather than as background and color:
+// an inline style beats any stylesheet rule, and a row that can't help this
+// week swaps them for grey in CSS.
 function TeamLabel({ team }: { team: string }) {
   const colours = teamColours(team)
   if (colours === null) return <span>{team}</span>
+  const style = { '--team-bg': colours.background, '--team-text': colours.text } as CSSProperties
   return (
-    <span className="team-label" style={{ background: colours.background, color: colours.text }}>
+    <span className="team-label" style={style}>
       {team}
     </span>
   )

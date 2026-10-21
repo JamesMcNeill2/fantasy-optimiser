@@ -219,8 +219,15 @@
   line-height: 1.5;
 }
 
+/* A team label's colours come from the team (set on the element by
+   TeamLabel) */
+.team-label {
+  background: var(--team-bg);
+  color: var(--team-text);
+}
+
 /* A deeper shade of the bye row's violet. Its own class, not team-label, so
-   the greyed-out filter on bye rows' team labels doesn't reach it. */
+   the grey given to team labels in bye rows doesn't reach it. */
 .bye-label {
   background: var(--bye-label-bg);
   color: var(--bye-label-text);
@@ -238,10 +245,18 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Players who can't help this week: the whole row is shaded and greyed.
-   Locked is grey; a bye is a muted violet. */
-.players tr.is-locked {
-  background: var(--locked-row);
+/* In a row that can't help this week, a slot chip turns grey and its text
+   takes the position's colour. Chips with no position colour (BN, IR) fall
+   back to muted text. */
+.players tr:is(.is-locked, .is-bye) .slot-chip {
+  background: var(--locked-bg);
+  color: var(--pos-ink, var(--muted));
+}
+
+/* Team labels in those rows give up their team colours for the same grey */
+.players tr:is(.is-locked, .is-bye) .team-label {
+  background: var(--locked-bg);
+  color: var(--muted);
 }
 
 .players tr.is-bye {
