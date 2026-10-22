@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import pytest
+
 from app.main import player_items, user_items
 
 FIXTURES = Path(__file__).parent / "fixtures"
