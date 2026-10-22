@@ -5,6 +5,7 @@ import type { League, RosterResponse, Team } from './api'
 import App from './App'
 import { ErrorBoundary } from './ErrorBoundary'
 import { deferred, json, settle, setUpBrowserTests, stubFetch, type Routes } from './testHelpers'
+import league0 from './assets/league-0.jpg'
 
 setUpBrowserTests()
 
@@ -150,6 +151,45 @@ describe('App', () => {
     const heading = await screen.findByRole('heading', { name: 'Hail Marys' })
     const avatar = heading.closest('header')?.querySelector('img')
     expect(avatar?.getAttribute('src')).toBe('/avatars/0a1b2c.jpg')
+  })
+
+  it("shows league 0's avatar on its box, and initials for a league without one", async () => {
+    stubFetch(api())
+    render(<App />)
+
+    const withAvatar = await screen.findByRole('link', { name: 'Fourth Down Heroes' })
+    expect(withAvatar.querySelector('img')?.getAttribute('src')).toBe(league0)
+    const withoutAvatar = screen.getByRole('link', { name: 'End Zone Elite' })
+    expect(withoutAvatar.querySelector('img')).toBeNull()
+    expect(withoutAvatar.querySelector('.badge')?.textContent).toBe('EZE')
+  })
+
+  it("shows the league's avatar beside the team picker's heading, not on the team boxes", async () => {
+    window.history.replaceState(null, '', '/?league=0')
+    stubFetch(api())
+    render(<App />)
+
+    const heading = await screen.findByRole('heading', { name: 'Fourth Down Heroes' })
+    expect(heading.closest('header')?.querySelector('img')?.getAttribute('src')).toBe(league0)
+    expect(screen.getByRole('link', { name: 'Hail Marys' }).querySelector('img')).toBeNull()
+  })
+
+  it('shows no image beside the team picker heading for a league without an avatar', async () => {
+    window.history.replaceState(null, '', '/?league=1')
+    stubFetch(api({ '/api/leagues/1/teams': () => json(TEAMS) }))
+    render(<App />)
+
+    const heading = await screen.findByRole('heading', { name: 'End Zone Elite' })
+    expect(heading.closest('header')?.querySelector('img')).toBeNull()
+  })
+
+  it("keeps the league's avatar off the lineup page, whose header is the team's", async () => {
+    window.history.replaceState(null, '', '/?league=0&team=8')
+    stubFetch(api())
+    render(<App />)
+
+    const heading = await screen.findByRole('heading', { name: 'Hail Marys' })
+    expect(heading.closest('header')?.querySelector('img')).toBeNull()
   })
 
   it('keeps showing the lineup when a list fails', async () => {
