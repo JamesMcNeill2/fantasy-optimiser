@@ -19,12 +19,11 @@ from typing import Any
 
 import httpx
 import pytest
+from app import main
+from app.main import BatchRunError
 from botocore.exceptions import ClientError
 from shared.config import ConfigError
 from shared.sleeper import BASE_URL
-
-from app import main
-from app.main import BatchRunError
 
 # --- Fake data -----------------------------------------------------------------
 # Obviously fake IDs: this file is committed, and the failure labels and the
