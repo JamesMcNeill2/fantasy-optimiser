@@ -16,6 +16,7 @@ import { weekLabel } from './lineup'
 import { PageHeader } from './PageHeader'
 import { SelectionLink } from './SelectionLink'
 import { APP_NAME } from './appName'
+import { leagueAvatar } from './leagueAvatars'
 
 function App() {
   const [selection, choose] = useSelection()
@@ -102,7 +103,11 @@ function App() {
             <RequestStatus requests={[leaguesRequest]} loading="Loading leagues…" />
             {leagueList !== undefined && (
               <ChoiceList
-                choices={leagueList.map((item) => ({ value: item.key, label: item.name }))}
+                choices={leagueList.map((item) => ({
+                  value: item.key,
+                  label: item.name,
+                  image: leagueAvatar(item.key),
+                }))}
                 size="large"
                 linkTo={(key) => ({ league: key, team: null })}
                 onNavigate={choose}
@@ -117,6 +122,7 @@ function App() {
               <PageHeader
                 title={league.name}
                 subtitle="Choose Your Team"
+                image={leagueAvatar(league.key)}
                 back={{ label: 'All Leagues', to: { league: null, team: null } }}
                 onNavigate={choose}
                 headingRef={headingRef}
