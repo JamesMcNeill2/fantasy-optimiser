@@ -39,7 +39,8 @@ module "batch" {
   league_ids         = var.league_ids
   avatars_bucket     = module.frontend.bucket_name
 
-  schedule_state = startswith(terraform.workspace, "feature-") ? "DISABLED" : "ENABLED"
+  schedule_expression = local.batch_schedule
+  schedule_state      = startswith(terraform.workspace, "feature-") ? "DISABLED" : "ENABLED"
 }
 
 module "frontend" {
@@ -47,4 +48,15 @@ module "frontend" {
   name_prefix       = local.name_prefix
   force_destroy     = startswith(terraform.workspace, "feature-")
   api_origin_domain = trimprefix(module.api.api_endpoint, "https://")
+}
+
+locals {
+  # Batch run times (Europe/London). Each run contains a Sleeper /players
+  # call, so no two environments run on the same day.
+  batch_schedules = {
+    prod = "cron(0 9 ? * THU,SUN *)"
+    dev  = "cron(0 9 ? * TUE *)"
+  }
+  # Feature environments' schedules are disabled; they take dev's expression.
+  batch_schedule = lookup(local.batch_schedules, terraform.workspace, local.batch_schedules["dev"])
 }

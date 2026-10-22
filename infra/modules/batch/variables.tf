@@ -57,9 +57,8 @@ variable "memory_size" {
 }
 
 variable "schedule_expression" {
-  description = "EventBridge Scheduler expression (cron or rate), evaluated in Europe/London"
+  description = "EventBridge Scheduler expression (cron or rate), evaluated in Europe/London (the root sets one per workspace)"
   type        = string
-  default     = "cron(0 9 ? * SUN *)"
 }
 
 variable "schedule_state" {
