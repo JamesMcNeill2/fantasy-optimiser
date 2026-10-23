@@ -1,0 +1,128 @@
+/* Matchday slate. light-dark() picks the first value in light mode and the
+   second in dark, following the visitor's system setting. */
+:root {
+  color-scheme: light dark;
+
+  --bg: light-dark(#f2f3f9, #181b2e);
+  --surface: light-dark(#ffffff, #22263d);
+  --surface-hover: light-dark(#f6f7fc, #2a2f4a);
+  --border: light-dark(#dcdeec, #33385a);
+  --text: light-dark(#1a1d33, #eceef8);
+  --muted: light-dark(#5d6182, #9599b8);
+  --accent: light-dark(#0e8a66, #3bd1a5);
+
+  --start-bg: light-dark(#dcf4ec, #1d3b3a);
+  --start-text: light-dark(#0b6e52, #3bd1a5);
+  --sit-bg: light-dark(#fbe3e9, #3d2236);
+  --sit-text: light-dark(#b02d4d, #f0809a);
+  --pickup-bg: light-dark(#fdf1d3, #3a3220);
+  --pickup-text: light-dark(#7a5800, #f2c14e);
+  --locked-bg: light-dark(#eceef6, #2b2f4c);
+  --locked-row: light-dark(#f4f5fa, #1d2035);
+  --bye-row: light-dark(#f1eefb, #241f3d);
+  --bye-label-bg: light-dark(#d9cff5, #3b3266);
+  --bye-label-text: light-dark(#553a96, #cdbdf7);
+
+  /* Position colours: the same in both modes, always with dark text */
+  --chip-text: #10131f;
+  --pos-qb: #f0607f;
+  --pos-rb: #2cc2a6;
+  --pos-wr: #4aa8f0;
+  --pos-te: #f29a4a;
+  --pos-k: #a57ef0;
+  --pos-def: #c08a68;
+  --pos-other: #b4b8d0;
+
+  font-family: 'Archivo Variable', system-ui, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* The page's centred column: the site header and main both sit in #root */
+#root {
+  max-width: 50rem;
+  margin: 0 auto;
+  padding: 0.75rem 1rem 2rem;
+}
+
+/* Condensed and heavy: the scoreboard type for names and scores */
+h1,
+h2,
+h3,
+.display {
+  font-stretch: 75%;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+/* The app's name */
+h1 {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+h2 {
+  font-size: 2.5rem;
+}
+
+/* Starters, Bench, Injured Reserve */
+h3 {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1.5rem;
+}
+
+/* The app's name, centred in a bar across the top of every page */
+.site-header {
+  margin-bottom: 0.875rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+
+/* The name links to the leagues page, without looking like a link */
+.site-header a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Form controls don't inherit the page's font unless told to */
+button {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--accent);
+}
+
+/* A clear outline for keyboard users, without one on every mouse click */
+:is(button, a):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Headings take focus after a navigation (tabIndex -1), but they aren't
+   controls, so no focus ring */
+[tabindex='-1']:focus {
+  outline: none;
+}
+
+.error {
+  color: var(--sit-text);
+}

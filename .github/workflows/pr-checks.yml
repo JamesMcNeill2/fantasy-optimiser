@@ -1,0 +1,61 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [dev, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    uses: ./.github/workflows/checks.yml
+
+  docker:
+    name: Docker (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api, batch]
+    env:
+      SERVICE: ${{ matrix.service }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build Image
+        run: |
+          docker build --platform linux/amd64 --provenance=false \
+            -f "services/$SERVICE/Dockerfile" -t "fantasy-$SERVICE:ci" .
+
+      # The Lambda base image includes the Runtime Interface Emulator
+      - name: Smoke Test Image
+        run: |
+          if [ "$SERVICE" = api ]; then
+            event=services/api/test-events/health.json
+          else
+            event=$RUNNER_TEMP/empty.json
+            echo '{}' > "$event"
+          fi
+          docker run -d --name smoke -p 9000:8080 "fantasy-$SERVICE:ci"
+          url=http://localhost:9000/2015-03-31/functions/function/invocations
+          for _ in $(seq 1 15); do
+            curl -sf -o response.json --data-binary "@$event" "$url" && break
+            sleep 1
+          done
+          docker logs smoke
+          docker rm -f smoke > /dev/null
+          cat response.json; echo
+          if [ "$SERVICE" = api ]; then
+            jq -e '.statusCode == 200' response.json
+          else
+            jq -e '.errorType == "ConfigError"' response.json
+          fi

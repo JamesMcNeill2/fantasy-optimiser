@@ -1,0 +1,156 @@
+name: Checks
+
+# Called by pr-checks.yml and deploy.yml; never runs on its own.
+# No secrets are passed in, and permissions are read-only.
+on:
+  workflow_call:
+    inputs:
+      upload-frontend-dist:
+        description: Upload frontend/dist as the frontend-dist artifact (deploy only)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  UV_VERSION: "0.12.23" # keep in step with both Dockerfiles' uv image and local uv
+  UV_LOCKED: "1" # every uv command behaves as --locked
+  TERRAFORM_VERSION: "1.16.2" # keep in step with deploy.yml, destroy-feature.yml and local Terraform
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+jobs:
+  python:
+    name: Lock and Ruff
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Lock Check
+        run: uv lock --check
+
+      - name: Ruff
+        run: |
+          uv run --only-dev ruff check
+          uv run --only-dev ruff format --check
+
+  pytest:
+    name: pytest (${{ matrix.member }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        member: [shared, services/api, services/batch]
+    defaults:
+      run:
+        working-directory: ${{ matrix.member }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: pytest
+        run: uv run pytest -q
+
+  terraform:
+    name: Terraform fmt and validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: infra/live
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive ..
+
+      # No backend, so no AWS credentials; modules and providers still load
+      - name: Terraform Init
+        run: terraform init -backend=false -lockfile=readonly
+
+      - name: Terraform Validate
+        run: terraform validate
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: frontend/.nvmrc
+          package-manager-cache: false
+
+      - name: Install Node Dependencies
+        run: npm ci --ignore-scripts
+
+      # Fails, printing the diff, if a response model changed without regenerated types
+      - name: Frontend API Types Check
+        run: |
+          npm run gen:api
+          git diff --exit-code -- openapi.json src/api-schema.ts
+
+      - name: Frontend Format Check
+        run: npm run format:check
+
+      - name: Frontend Lint
+        run: npm run lint
+
+      - name: Frontend Vitest
+        run: npx vitest run
+
+      - name: Frontend Build
+        run: npm run build
+
+      - name: Frontend Upload Build
+        if: inputs.upload-frontend-dist
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          if-no-files-found: error
+          retention-days: 3

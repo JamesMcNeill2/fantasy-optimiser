@@ -1,0 +1,22 @@
+import logging
+
+
+def configure_logging() -> None:
+    """Configure logging for both Lambda and local execution."""
+
+    root = logging.getLogger()
+
+    if root.handlers:
+        # Set the logging for lambda
+        root.setLevel(logging.INFO)
+        for handler in root.handlers:
+            handler.setFormatter(
+                logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+            )
+    else:
+        # Set the logging for local execution
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s [%(levelname)s] %(message)s",
+            handlers=[logging.StreamHandler()],
+        )

@@ -17,11 +17,15 @@ concurrency:
 env:
   TF_IN_AUTOMATION: "true"
   TF_INPUT: "false"
+  TF_VAR_league_ids: '["0"]'
 
 jobs:
   destroy:
     if: github.event.ref_type == 'branch' && startsWith(github.event.ref, 'feature/')
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TF_VAR_image_tag: unused-on-destroy
     defaults:
       run:
         working-directory: infra/live
@@ -30,7 +34,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: main
+          persist-credentials: false
 
       # Must produce exactly the same name as deploy.yml does
       - name: Set Workspace Name
@@ -53,11 +57,11 @@ jobs:
           echo "Workspace: $WORKSPACE"
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e #v4.0.1
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
-          terraform_version: 1.16.2
+          terraform_version: 1.16.2 # keep in step with TERRAFORM_VERSION in checks.yml, deploy.yml and local Terraform
           terraform_wrapper: false
-      
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
@@ -68,7 +72,7 @@ jobs:
         env:
           TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
         run: terraform init -backend-config="bucket=$TF_STATE_BUCKET"
-      
+
       # Don't use -or-create here
       # A missing workspace means the branch was never deployed
       # so there is nothing to destroy
@@ -88,7 +92,7 @@ jobs:
 
       - name: Destroy
         if: steps.ws.outputs.exists == 'true'
-        run: terraform destroy -auto-approve -lock-timeout=5m
+        run: terraform destroy -no-color -auto-approve -lock-timeout=5m
 
       - name: Verify State Is Empty
         if: steps.ws.outputs.exists == 'true'

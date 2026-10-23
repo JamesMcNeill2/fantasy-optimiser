@@ -1,6 +1,6 @@
-FROM ghcr.io/astral-sh/uv:0.12.13 AS uv
+FROM ghcr.io/astral-sh/uv:0.12.23 AS uv
 
-FROM public.ecr.aws/lambda/python:3.14@sha256:0f6bf1e7a20f4a537f309d4bc53b8b190567dece870e6cfd4c1fd44f662705a3
+FROM public.ecr.aws/lambda/python:3.14@sha256:fc4e15a5e09e2c9b6184810ea0fdc87afe1c1c734c98cbe27d739a35c3f15e7e
 
 COPY --from=uv /uv /bin/uv
 
@@ -12,6 +12,7 @@ ENV UV_COMPILE_BYTECODE=1
 COPY pyproject.toml uv.lock /build/
 COPY services/api/pyproject.toml /build/services/api/
 COPY services/batch/pyproject.toml /build/services/batch/
+COPY shared/pyproject.toml /build/shared/
 
 RUN cd /build && \
     uv export --package batch --locked --no-dev --no-emit-workspace -o requirements.txt && \
@@ -20,7 +21,7 @@ RUN cd /build && \
 
 # Code last
 # Least frequently changed first
-COPY shared/ ${LAMBDA_TASK_ROOT}/shared/
+COPY shared/src/shared/ ${LAMBDA_TASK_ROOT}/shared/
 COPY services/batch/app/ ${LAMBDA_TASK_ROOT}/app/
 
 CMD ["app.main.handler"]

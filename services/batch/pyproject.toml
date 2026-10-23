@@ -5,4 +5,19 @@ requires-python = ">=3.14"
 dependencies = [
     "boto3>=1.43.101",
     "httpx>=0.28.1",
+    "shared",
 ]
+
+[dependency-groups]
+dev = [
+    "boto3-stubs[dynamodb,s3]>=1.43.108",
+    "botocore[crt]>=1.43.108",
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.uv.sources]
+shared = { workspace = true }

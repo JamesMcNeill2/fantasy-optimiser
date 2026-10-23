@@ -1,0 +1,35 @@
+[
+  {
+    "avatar": "fake_avatar_1",
+    "display_name": "fake_display_name_1",
+    "is_bot": "fake_is_bot_1",
+    "is_owner": "fake_is_owner_1",
+    "league_id": "fake_league_id_1",
+    "metadata": {
+      "team_name": "Test Team",
+      "avatar": "https://sleepercdn.com/uploads/12345.jpg"
+    },
+    "settings": "fake_settings_1",
+    "user_id": "fake_user_id_1"
+  },
+  {
+    "avatar": "fake_avatar_2",
+    "display_name": "fake_display_name_2",
+    "is_bot": "fake_is_bot_2",
+    "is_owner": "fake_is_owner_2",
+    "league_id": "fake_league_id_2",
+    "metadata": {},
+    "settings": "fake_settings_2",
+    "user_id": "fake_user_id_2"
+  },
+  {
+    "avatar": "fake_avatar_3",
+    "display_name": "fake_display_name_3",
+    "is_bot": "fake_is_bot_3",
+    "is_owner": "fake_is_owner_3",
+    "league_id": "fake_league_id_3",
+    "metadata": null,
+    "settings": "fake_settings_3",
+    "user_id": "fake_user_id_3"
+  }
+]
