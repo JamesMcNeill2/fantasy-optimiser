@@ -86,6 +86,19 @@ jobs:
       - name: Select Workspace
         run: terraform workspace select -or-create "$WORKSPACE"
 
+      # Mask the site domain and the API ID for the rest of the job (outputs,
+      # refresh lines, plan diffs). Read from state, so a new environment has
+      # nothing to mask on its first deploy.
+      - name: Mask URLs
+        run: |
+          cf=$(terraform output -raw frontend_domain_name 2>/dev/null || true)
+          api=$(terraform output -raw api_endpoint 2>/dev/null || true)
+          api_id=${api#https://}
+          api_id=${api_id%%.*}
+          for v in "$cf" "$api_id"; do
+            if [ -n "$v" ]; then echo "::add-mask::$v"; fi
+          done
+
       - name: Terraform Apply ECR
         env:
           TF_VAR_league_ids: ${{ secrets.LEAGUE_IDS }}
