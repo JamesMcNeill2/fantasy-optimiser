@@ -1,5 +1,7 @@
 # Fantasy Lineup Optimiser
 
+[![Deploy](https://github.com/JamesMcNeill2/fantasy-optimiser/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/JamesMcNeill2/fantasy-optimiser/actions/workflows/deploy.yml)
+
 A web app that shows fantasy football managers on [Sleeper](https://sleeper.com)
 their best lineup for the week. Pick a league, then a team, and it shows the
 lineup that would score the most this week, choosing players by Sleeper's
