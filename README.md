@@ -52,7 +52,7 @@ flowchart TB
   batch -- "team avatars" --> site
   batch -- "players,<br/>league members" --> sleeper["Sleeper API"]
   batch -- "writes" --> ddb[("DynamoDB:<br/>players, users")]
-  api -- "reads" --> ddb
+  api -- "reads" ---> ddb
   api -- "rosters, projections,<br/>schedule, scores" --> sleeper
   ddb ~~~ sleeper
 
