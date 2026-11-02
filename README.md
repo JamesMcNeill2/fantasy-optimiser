@@ -22,15 +22,15 @@ The images below show what each of the pages look like on a phone screen, how
 the user selects their league and team and what their optimised lineup looks
 like.
 
-### League and Team Selection
+### Choosing a league and team
 <p align="center">
-  <img src="docs/screenshots/leagues.png" width="250"
-  alt="The League Selection Page">
-  <img src="docs/screenshots/teams.png" width="250"
-  alt="The Team Selection Page">
+  <img src="docs/screenshots/leagues.png" width="250" align="top"
+  alt="The league selection page">
+  <img src="docs/screenshots/teams.png" width="250" align="top"
+  alt="The team selection page">
 </p>
 
-### The Teams Optimal Lineup
+### The team's optimal lineup
 <p align="center">
   <img src="docs/screenshots/changes.png" width="250" align="top"
   alt="The summary of changes to make and the point they gain">
