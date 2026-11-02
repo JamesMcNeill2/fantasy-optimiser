@@ -50,10 +50,20 @@ flowchart TB
   apigw --> api["api Lambda<br/>FastAPI and the optimiser"]
   scheduler["EventBridge Scheduler"] --> batch["batch Lambda"]
   batch -- "team avatars" --> site
+  batch -- "players,<br/>league members" --> sleeper["Sleeper API"]
   batch -- "writes" --> ddb[("DynamoDB:<br/>players, users")]
   api -- "reads" --> ddb
-  batch -- "players,<br/>league members" --> sleeper["Sleeper API"]
   api -- "rosters, projections,<br/>schedule, scores" --> sleeper
+  ddb ~~~ sleeper
+
+  classDef entry fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+  classDef compute fill:#dcfce7,stroke:#16a34a,color:#14532d
+  classDef storage fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+  classDef external fill:#f1f5f9,stroke:#64748b,color:#0f172a,stroke-dasharray:4
+  class browser,cf,apigw entry
+  class scheduler,batch,api compute
+  class site,ddb storage
+  class sleeper external
 ```
 
 - **Frontend** (`frontend/`): a React single-page app in a private S3 bucket,
