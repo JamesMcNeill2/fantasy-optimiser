@@ -115,11 +115,13 @@ Actions secret, a local `.env` file and the Lambdas' environment variables.
 
 ## Repo layout
 
-```
+```text
 .github/
   dependabot.yml          GitHub Actions, uv, Docker and npm updates, into dev
   workflows/              checks.yml (shared), pr-checks.yml, deploy.yml,
                           destroy-feature.yml
+docs/
+  screenshots/            the README's screenshots
 frontend/                 React, Vite and TypeScript single-page app
 infra/
   live/                   the root Terraform module (one workspace per branch)
@@ -176,7 +178,7 @@ lineup on randomly generated rosters.
 The api reads its settings from the environment. Locally, put them in a `.env`
 file at the repo root (it's gitignored):
 
-```
+```text
 PLAYERS_TABLE=<players table name>
 USERS_TABLE=<users table name>
 LEAGUE_IDS=<league id>,<league id>
@@ -247,6 +249,9 @@ aws lambda invoke --region eu-west-2 --function-name $fn --payload '{}' --cli-re
 The long read timeout stops the AWS CLI from retrying a slow run, which would
 fetch the player list a second time. The response's summary contains league
 IDs, so don't paste it anywhere public.
+
+Do it on a day no schedule runs (Monday, Wednesday, Friday or Saturday), and
+refresh at most one environment a day.
 
 ## CI/CD
 
