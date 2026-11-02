@@ -16,6 +16,30 @@ APIs and FastAPI, with React, Vite and TypeScript on the frontend. Where there
 was a choice, the design favours hands-on learning over the leanest possible
 setup.
 
+## Screenshots
+
+The images below show what each of the pages look like on a phone screen, how
+the user selects their league and team and what their optimised lineup looks
+like.
+
+### League and Team Selection
+<p align="center">
+  <img src="docs/screenshots/leagues.png" width="250"
+  alt="The League Selection Page">
+  <img src="docs/screenshots/teams.png" width="250"
+  alt="The Team Selection Page">
+</p>
+
+### The Teams Optimal Lineup
+<p align="center">
+  <img src="docs/screenshots/changes.png" width="250" align="top"
+  alt="The summary of changes to make and the point they gain">
+  <img src="docs/screenshots/starters.png" width="250" align="top"
+  alt="The optimal starters for this week">
+  <img src="docs/screenshots/bench.png" width="250" align="top"
+  alt="The optimal bench for this week and any IR players in the team">
+</p>
+
 ## How it works
 
 ```mermaid
