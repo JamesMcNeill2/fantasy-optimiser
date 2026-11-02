@@ -1,5 +1,7 @@
 # Fantasy Lineup Optimiser
 
+[![Deploy](https://github.com/JamesMcNeill2/fantasy-optimiser/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/JamesMcNeill2/fantasy-optimiser/actions/workflows/deploy.yml)
+
 A web app that shows fantasy football managers on [Sleeper](https://sleeper.com)
 their best lineup for the week. Pick a league, then a team, and it shows the
 lineup that would score the most this week, choosing players by Sleeper's
@@ -14,6 +16,30 @@ APIs and FastAPI, with React, Vite and TypeScript on the frontend. Where there
 was a choice, the design favours hands-on learning over the leanest possible
 setup.
 
+## Screenshots
+
+The images below show what each of the pages look like on a phone screen, how
+the user selects their league and team and what their optimised lineup looks
+like.
+
+### Choosing a league and team
+<p align="center">
+  <img src="docs/screenshots/leagues.png" width="250" align="top"
+  alt="The league selection page">
+  <img src="docs/screenshots/teams.png" width="250" align="top"
+  alt="The team selection page">
+</p>
+
+### The team's optimal lineup
+<p align="center">
+  <img src="docs/screenshots/changes.png" width="250" align="top"
+  alt="The summary of changes to make and the point they gain">
+  <img src="docs/screenshots/starters.png" width="250" align="top"
+  alt="The optimal starters for this week">
+  <img src="docs/screenshots/bench.png" width="250" align="top"
+  alt="The optimal bench for this week and any IR players in the team">
+</p>
+
 ## How it works
 
 ```mermaid
@@ -25,9 +51,19 @@ flowchart TB
   scheduler["EventBridge Scheduler"] --> batch["batch Lambda"]
   batch -- "team avatars" --> site
   batch -- "writes" --> ddb[("DynamoDB:<br/>players, users")]
-  api -- "reads" --> ddb
   batch -- "players,<br/>league members" --> sleeper["Sleeper API"]
   api -- "rosters, projections,<br/>schedule, scores" --> sleeper
+  api -- "reads" --> ddb
+  sleeper ~~~ ddb
+
+  classDef entry fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+  classDef compute fill:#dcfce7,stroke:#16a34a,color:#14532d
+  classDef storage fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+  classDef external fill:#f1f5f9,stroke:#64748b,color:#0f172a,stroke-dasharray:4
+  class browser,cf,apigw entry
+  class scheduler,batch,api compute
+  class site,ddb storage
+  class sleeper external
 ```
 
 - **Frontend** (`frontend/`): a React single-page app in a private S3 bucket,
@@ -79,11 +115,13 @@ Actions secret, a local `.env` file and the Lambdas' environment variables.
 
 ## Repo layout
 
-```
+```text
 .github/
   dependabot.yml          GitHub Actions, uv, Docker and npm updates, into dev
   workflows/              checks.yml (shared), pr-checks.yml, deploy.yml,
                           destroy-feature.yml
+docs/
+  screenshots/            the README's screenshots
 frontend/                 React, Vite and TypeScript single-page app
 infra/
   live/                   the root Terraform module (one workspace per branch)
@@ -140,7 +178,7 @@ lineup on randomly generated rosters.
 The api reads its settings from the environment. Locally, put them in a `.env`
 file at the repo root (it's gitignored):
 
-```
+```text
 PLAYERS_TABLE=<players table name>
 USERS_TABLE=<users table name>
 LEAGUE_IDS=<league id>,<league id>
@@ -211,6 +249,9 @@ aws lambda invoke --region eu-west-2 --function-name $fn --payload '{}' --cli-re
 The long read timeout stops the AWS CLI from retrying a slow run, which would
 fetch the player list a second time. The response's summary contains league
 IDs, so don't paste it anywhere public.
+
+Do it on a day no schedule runs (Monday, Wednesday, Friday or Saturday), and
+refresh at most one environment a day.
 
 ## CI/CD
 
